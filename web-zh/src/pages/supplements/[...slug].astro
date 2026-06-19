@@ -1,0 +1,32 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('supplements');
+  return entries.map(e => ({ params: { slug: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const titles: Record<string, string> = {
+  'S01-bootstrap-and-state': 'Bootstrap 与状态管理',
+  'S02-api-layer-and-cache': 'API 层与 Prompt Cache',
+  'S03-concurrent-tool-execution': '并发工具执行',
+  'S04-terminal-ui-and-input': '终端 UI 与输入交互',
+  'S05-mcp-transports': 'MCP 传输协议',
+  'S06-remote-control': '远程控制',
+  'S07-performance-engineering': '性能工程',
+};
+---
+
+<BaseLayout title={`${titles[entry.id] || entry.id} — 补充资料`} description="">
+  <main class="max-w-3xl mx-auto px-4 md:px-8 py-12">
+    <a href="/claude-code-universe/supplements/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 补充资料</a>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-8">{titles[entry.id] || entry.id}</h1>
+    <article class="chapter-prose">
+      <Content />
+    </article>
+  </main>
+</BaseLayout>

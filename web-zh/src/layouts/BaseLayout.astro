@@ -34,17 +34,17 @@ const { title, description } = Astro.props;
     <!-- Top Navigation Bar -->
     <nav class="sticky top-0 z-50 border-b border-[var(--color-border)] dark:border-[#333] bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-4 md:px-8 h-12 flex items-center gap-6 text-sm">
-        <a href={`${Astro.url?.origin ?? ''}/claude-code-universe/`} class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
-          🦀 学习宇宙
+        <a href="/claude-code-universe/" class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+          🦀 首页
         </a>
         <span class="text-[var(--color-muted)]">|</span>
-        <a href={`${Astro.url?.origin ?? ''}/claude-code-universe/ch01-architecture/`} class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+        <a href="/claude-code-universe/ch01-architecture/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
           📖 架构分析
         </a>
-        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/deep-dive/README.md" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+        <a href="/claude-code-universe/deep-dive/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
           🔬 深度笔记
         </a>
-        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/supplements/README.md" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+        <a href="/claude-code-universe/supplements/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
           📝 补充资料
         </a>
         <span class="flex-1"></span>

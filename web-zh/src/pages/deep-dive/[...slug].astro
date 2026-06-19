@@ -1,0 +1,33 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('deepdive');
+  return entries.map(e => ({ params: { slug: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const titles: Record<string, string> = {
+  '01-agent-loop': 'Agent 本质 + Agent Loop',
+  '02-tool-system': 'Tool System 深度解剖',
+  '03-todowrite-subagent': 'TodoWrite + Subagent',
+  '04-skills-compaction': 'Skill Loading + Context Compaction',
+  '05-tasks-background': 'Persistent Tasks + Background Tasks',
+  '06-teams-protocols': 'Agent Teams + Team Protocols',
+  '07-autonomous-worktree': 'Autonomous Agents + Worktree Isolation',
+  '08-full-agent-summary': 'Full Agent 全景图',
+};
+---
+
+<BaseLayout title={`${titles[entry.id] || entry.id} — 深度笔记`} description="">
+  <main class="max-w-3xl mx-auto px-4 md:px-8 py-12">
+    <a href="/claude-code-universe/deep-dive/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 深度笔记</a>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-8">{titles[entry.id] || entry.id}</h1>
+    <article class="chapter-prose">
+      <Content />
+    </article>
+  </main>
+</BaseLayout>
