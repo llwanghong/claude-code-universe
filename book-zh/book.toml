@@ -1,0 +1,19 @@
+[book]
+authors = ["llwanghong"]
+language = "zh"
+multilingual = false
+src = "."
+title = "Claude Code 源码深度解析"
+
+[output.html]
+git-repository-url = "https://github.com/llwanghong/claude-code-universe"
+git-repository-icon = "github"
+edit-url-template = "https://github.com/llwanghong/claude-code-universe/edit/main/book-zh/{path}"
+site-url = "/claude-code-universe/book-zh/"
+additional-css = []
+additional-js = []
+no-section-label = true
+
+[output.html.fold]
+enable = true
+level = 1
