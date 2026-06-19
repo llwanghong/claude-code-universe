@@ -59,20 +59,16 @@ const steps: Step[] = [
 
     <div class="space-y-2">
       {steps.map((s, i) => (
-        <div class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333]">
+        <a href={`/claude-code-universe/tutorial/${s.slug}/`} class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group">
           <span class="text-sm font-mono text-[var(--color-terracotta)] mt-0.5 shrink-0 w-8 text-right">{i + 1}</span>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-              <span class="font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">{s.title}</span>
+              <span class="font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">{s.title}</span>
               <span class="text-xs text-[var(--color-muted)] font-mono shrink-0">{s.py}</span>
             </div>
             <p class="text-xs text-[var(--color-muted)] mt-1">🔬 {s.deep}</p>
-            <div class="flex gap-3 mt-2 text-xs">
-              <a href={`https://github.com/shareAI-lab/learn-claude-code/blob/main/docs/zh/${s.slug}.md`} class="text-[var(--color-terracotta)] hover:underline">📖 文档</a>
-              <a href={`https://github.com/shareAI-lab/learn-claude-code/blob/main/agents/${s.py}`} class="text-[var(--color-terracotta)] hover:underline">🐍 源码</a>
-            </div>
           </div>
-        </div>
+        </a>
       ))}
     </div>
 

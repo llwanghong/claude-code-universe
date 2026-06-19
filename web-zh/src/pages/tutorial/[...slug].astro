@@ -1,0 +1,102 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+interface TitleMap {
+  [key: string]: string;
+}
+
+const titles: TitleMap = {
+  's01-the-agent-loop': 'Agent Loop — 核心循环',
+  's02-tool-use': 'Tool System — 工具系统',
+  's03-todo-write': 'TodoWrite — 任务规划',
+  's04-subagent': 'Subagent — 子代理',
+  's05-skill-loading': 'Skill Loading — 技能加载',
+  's06-context-compact': 'Context Compaction — 上下文压缩',
+  's07-task-system': 'Task System — 持久化任务',
+  's08-background-tasks': 'Background Tasks — 后台任务',
+  's09-agent-teams': 'Agent Teams — 团队协作',
+  's10-team-protocols': 'Team Protocols — 团队协议',
+  's11-autonomous-agents': 'Autonomous Agents — 自主代理',
+  's12-worktree-task-isolation': 'Worktree Isolation — 目录隔离',
+};
+
+const deepLinkMap: TitleMap = {
+  '01': '01-agent-loop',
+  '02': '02-tool-system',
+  '03': '03-todowrite-subagent',
+  '04': '03-todowrite-subagent',
+  '05': '04-skills-compaction',
+  '06': '04-skills-compaction',
+  '07': '05-tasks-background',
+  '08': '05-tasks-background',
+  '09': '06-teams-protocols',
+  '10': '06-teams-protocols',
+  '11': '07-autonomous-worktree',
+  '12': '07-autonomous-worktree',
+};
+
+const deepTitleMap: TitleMap = {
+  '01': 'Agent 本质 + Agent Loop（教学版 vs query.ts）',
+  '02': 'Tool System（dispatch map → 44工具工业引擎）',
+  '03': 'TodoWrite（模型自我追踪 + nag reminder）',
+  '04': 'Subagent（fresh context + filtered tools）',
+  '05': 'Skill Loading + Compaction（按需加载 + 5层压缩）',
+  '06': '三层压缩 → 五层生产流水线',
+  '07': '持久化任务 + 异步执行（JSON → 8种Task类型）',
+  '08': 'Background Tasks（线程池 → notification queue）',
+  '09': 'Agent Teams（JSONL inbox → Swarm多Backend）',
+  '10': 'Team Protocols（request_id + shutdown FSM）',
+  '11': 'Autonomous（idle poll → Cron定时唤醒）',
+  '12': 'Worktree Isolation（git worktree + 并行安全）',
+};
+
+export async function getStaticPaths() {
+  const entries = await getCollection('tutorial');
+  return entries.map(e => ({ params: { slug: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const num = (entry.id.match(/s(\d+)/) || ['',''])[1];
+const deepSlug = deepLinkMap[num] || '';
+---
+
+<BaseLayout title={`${titles[entry.id] || entry.id} — 动手实践`} description="">
+  <main class="max-w-3xl mx-auto px-4 md:px-8 py-12">
+    <a href="/claude-code-universe/tutorial/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-6 inline-block">← 动手实践</a>
+
+    <div class="p-4 mb-8 rounded-lg border border-[var(--color-border)] dark:border-[#333] bg-[var(--color-beige)]/30 dark:bg-gray-900/50">
+      <p class="text-sm font-mono text-[var(--color-terracotta)] mb-1">📁 s{num.padStart(2, '0')}_*.py · 第 {num} 步</p>
+      <p class="text-xs text-[var(--color-muted)]">来自 shareAI-lab/learn-claude-code · 12 步渐进式 Agent Harness 教程</p>
+    </div>
+
+    <article class="prose prose-gray dark:prose-invert max-w-none
+      prose-headings:text-gray-900 dark:prose-headings:text-white
+      prose-h1:text-3xl prose-h1:font-bold prose-h2:text-2xl prose-h2:font-bold
+      prose-h3:text-xl prose-h3:font-semibold prose-p:leading-relaxed
+      prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:rounded prose-code:px-1
+      prose-code:before:content-none prose-code:after:content-none
+      prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100
+      prose-table:w-full prose-table:border-collapse
+      prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600
+      prose-th:bg-gray-100 dark:prose-th:bg-gray-800 prose-th:px-3 prose-th:py-2
+      prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-600 prose-td:px-3 prose-td:py-2
+      prose-a:text-blue-500 hover:prose-a:text-blue-400
+      prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-gray-900/50
+      prose-li:my-1
+    ">
+      <Content />
+    </article>
+
+    {deepSlug && (
+      <div class="mt-12 pt-8 border-t border-[var(--color-border)] dark:border-[#333]">
+        <h2 class="text-lg font-bold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🔬 深入分析</h2>
+        <p class="text-sm text-[var(--color-muted)] mb-4">{deepTitleMap[num] || ''}</p>
+        <a href={`/claude-code-universe/deep-dive/${deepSlug}/`} class="inline-block px-4 py-2 rounded-lg border border-[var(--color-terracotta)] text-[var(--color-terracotta)] text-sm font-medium hover:bg-[var(--color-terracotta)] hover:text-white transition-colors no-underline">
+          查看完整深度分析 →
+        </a>
+      </div>
+    )}
+  </main>
+</BaseLayout>

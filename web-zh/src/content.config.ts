@@ -13,4 +13,8 @@ const supplements = defineCollection({
   loader: glob({ pattern: 'S*.md', base: '../supplements' }),
 });
 
-export const collections = { chapters, deepdive, supplements };
+const tutorial = defineCollection({
+  loader: glob({ pattern: 's*.md', base: '../upstream/learn-claude-code/docs/zh' }),
+});
+
+export const collections = { chapters, deepdive, supplements, tutorial };
