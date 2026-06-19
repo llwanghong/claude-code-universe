@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const allSkills = await getCollection('skills');
+
+const skillInfo: Record<string, { title: string; desc: string }> = {
+  'agent-builder': { title: 'Agent Builder', desc: '构建自定义 Agent 的完整指南' },
+  'code-review': { title: 'Code Review', desc: '代码审查 Agent 的配置与使用' },
+  'mcp-builder': { title: 'MCP Builder', desc: '构建 MCP 服务器的模板与指南' },
+  'pdf': { title: 'PDF', desc: 'PDF 文件处理技能' },
+};
+---
+
+<BaseLayout title="技能 — learn-claude-code" description="">
+  <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
+    <a href="/claude-code-universe/tutorial/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 动手实践</a>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🎯 内置技能</h1>
+    <p class="text-lg text-[var(--color-muted)] mb-10">learn-claude-code 自带的 4 个 Skill 示例 — 每个 Skill 是一个独立的 SKILL.md 文件，展示了两阶段加载模式。</p>
+
+    <div class="space-y-4">
+      {allSkills.map(s => {
+        const name = s.id.replace('/SKILL', '');
+        const info = skillInfo[name] || { title: name, desc: '' };
+        return (
+          <a href={`/claude-code-universe/tutorial/skills/${name}/`} class="block p-5 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline">
+            <h3 class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">🎯 {info.title}</h3>
+            <p class="text-sm text-[var(--color-muted)]">{info.desc}</p>
+            <p class="text-xs text-[var(--color-muted)] mt-1 font-mono">{s.id}</p>
+          </a>
+        );
+      })}
+    </div>
+  </main>
+</BaseLayout>

@@ -1,0 +1,34 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const entries = await getCollection('philosophy');
+const entry = entries[0];
+const { Content } = entry ? await render(entry) : { Content: null };
+---
+
+<BaseLayout title="核心理念 — Agent 的本质" description="Agency 来自模型训练，Agent 产品 = 模型 + Harness">
+  <main class="max-w-3xl mx-auto px-4 md:px-8 py-12">
+    <a href="/claude-code-universe/tutorial/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-6 inline-block">← 动手实践</a>
+
+    {Content ? (
+      <article class="prose prose-gray dark:prose-invert max-w-none
+        prose-table:border-collapse prose-table:w-full
+        prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600 prose-th:bg-gray-100 dark:prose-th:bg-gray-800 prose-th:px-3 prose-th:py-2 prose-th:text-sm
+        prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-600 prose-td:px-3 prose-td:py-2 prose-td:text-sm
+        prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+        prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100
+        prose-a:text-blue-500 hover:prose-a:text-blue-400
+        prose-headings:text-gray-900 dark:prose-headings:text-white
+        prose-h1:text-3xl prose-h1:font-bold
+        prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-10 prose-h2:mb-4
+        prose-h3:text-xl prose-h3:font-semibold prose-h3:mt-8 prose-h3:mb-3
+        prose-ul:list-disc prose-ol:list-decimal
+        prose-li:my-1">
+        <Content />
+      </article>
+    ) : (
+      <p class="text-[var(--color-muted)]">内容加载失败</p>
+    )}
+  </main>
+</BaseLayout>

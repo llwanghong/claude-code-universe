@@ -25,8 +25,34 @@ const titles: Record<string, string> = {
   <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
     <a href="/claude-code-universe/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 返回首页</a>
     <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🛠️ 动手实践</h1>
-    <p class="text-lg text-[var(--color-muted)] mb-2">基于 <a href="https://github.com/shareAI-lab/learn-claude-code" class="text-[var(--color-terracotta)]">shareAI-lab/learn-claude-code</a></p>
-    <p class="text-base text-[var(--color-muted)] mb-10">12 步渐进式 Python 教程 — 从 120 行的 Agent Loop 到完整的自主 Agent 系统。每步都是可以跑的代码，每一步只增加一个概念。</p>
+    <p class="text-lg text-[var(--color-muted)] mb-8">基于 <a href="https://github.com/shareAI-lab/learn-claude-code" class="text-[var(--color-terracotta)]">shareAI-lab/learn-claude-code</a> — 完整的 Agent Harness 工程教学仓库</p>
+
+    <!-- Resource cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+      <a href="/claude-code-universe/tutorial/philosophy/" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
+        <span class="text-2xl block mb-2">📜</span>
+        <span class="text-sm font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">核心理念</span>
+        <span class="text-xs text-[var(--color-muted)] block mt-1">Agency vs Harness</span>
+      </a>
+      <a href="/claude-code-universe/tutorial/skills/" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
+        <span class="text-2xl block mb-2">🎯</span>
+        <span class="text-sm font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">内置技能</span>
+        <span class="text-xs text-[var(--color-muted)] block mt-1">4 个 Skill 示例</span>
+      </a>
+      <a href="https://github.com/shareAI-lab/learn-claude-code/tree/main/agents" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
+        <span class="text-2xl block mb-2">🐍</span>
+        <span class="text-sm font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">Python 源码</span>
+        <span class="text-xs text-[var(--color-muted)] block mt-1">14 个可运行文件</span>
+      </a>
+      <a href="https://github.com/shareAI-lab/learn-claude-code" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
+        <span class="text-2xl block mb-2">📦</span>
+        <span class="text-sm font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">原始仓库</span>
+        <span class="text-xs text-[var(--color-muted)] block mt-1">查看完整代码</span>
+      </a>
+    </div>
+
+    <h2 class="text-xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">12 步渐进教程</h2>
+    <p class="text-base text-[var(--color-muted)] mb-6">从 120 行的 Agent Loop 到完整的自主 Agent 系统。每步都是可以跑的代码，每一步只增加一个概念。</p>
 
     <div class="space-y-2">
       {steps.map((s, i) => {

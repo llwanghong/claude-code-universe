@@ -17,4 +17,16 @@ const tutorial = defineCollection({
   loader: glob({ pattern: 's*.md', base: '../upstream/learn-claude-code/docs/zh' }),
 });
 
-export const collections = { chapters, deepdive, supplements, tutorial };
+const philosophy = defineCollection({
+  loader: glob({ pattern: 'README-zh.md', base: '../upstream/learn-claude-code' }),
+});
+
+const skills = defineCollection({
+  loader: glob({ pattern: '**/SKILL.md', base: '../upstream/learn-claude-code/skills' }),
+});
+
+const sourceCode = defineCollection({
+  loader: glob({ pattern: 's*.py', base: '../upstream/learn-claude-code/agents' }),
+});
+
+export const collections = { chapters, deepdive, supplements, tutorial, philosophy, skills, sourceCode };
