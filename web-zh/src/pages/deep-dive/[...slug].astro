@@ -1,0 +1,51 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+interface ArticleTitle {
+  [key: string]: string;
+}
+
+const titles: ArticleTitle = {
+  '01-agent-loop': 'Agent 本质 + Agent Loop',
+  '02-tool-system': 'Tool System 深度解剖',
+  '03-todowrite-subagent': 'TodoWrite + Subagent',
+  '04-skills-compaction': 'Skill Loading + Context Compaction',
+  '05-tasks-background': 'Persistent Tasks + Background Tasks',
+  '06-teams-protocols': 'Agent Teams + Team Protocols',
+  '07-autonomous-worktree': 'Autonomous Agents + Worktree Isolation',
+  '08-full-agent-summary': 'Full Agent 全景图',
+};
+
+export async function getStaticPaths() {
+  const entries = await getCollection('deepdive');
+  return entries.map(e => ({ params: { slug: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<BaseLayout title={`${titles[entry.id] || entry.id} — 深度笔记`} description="">
+  <main class="max-w-3xl mx-auto px-4 md:px-8 py-12">
+    <a href="/claude-code-universe/deep-dive/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 深度笔记</a>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-8">{titles[entry.id] || entry.id}</h1>
+    <article class="prose prose-gray dark:prose-invert max-w-none
+      prose-headings:text-gray-900 dark:prose-headings:text-white
+      prose-h1:text-3xl prose-h1:font-bold prose-h2:text-2xl prose-h2:font-bold
+      prose-h3:text-xl prose-h3:font-semibold prose-p:leading-relaxed
+      prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:rounded prose-code:px-1
+      prose-code:before:content-none prose-code:after:content-none
+      prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100
+      prose-table:w-full prose-table:border-collapse
+      prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600
+      prose-th:bg-gray-100 dark:prose-th:bg-gray-800 prose-th:px-3 prose-th:py-2
+      prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-600 prose-td:px-3 prose-td:py-2
+      prose-a:text-blue-500 hover:prose-a:text-blue-400
+      prose-ul:list-disc prose-ol:list-decimal
+      prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-gray-900/50
+    ">
+      <Content />
+    </article>
+  </main>
+</BaseLayout>

@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+interface ArticleTitle {
+  [key: string]: string;
+}
+
+const titles: ArticleTitle = {
+  'S01-bootstrap-and-state': 'Bootstrap 与状态管理',
+  'S02-api-layer-and-cache': 'API 层与 Prompt Cache',
+  'S03-concurrent-tool-execution': '并发工具执行',
+  'S04-terminal-ui-and-input': '终端 UI 与输入交互',
+  'S05-mcp-transports': 'MCP 传输协议',
+  'S06-remote-control': '远程控制',
+  'S07-performance-engineering': '性能工程',
+};
+
+const articles = await getCollection('supplements');
+articles.sort((a, b) => a.id.localeCompare(b.id));
+---
+
+<BaseLayout title="补充资料" description="7 篇补充文章，覆盖启动、并发、MCP 等主题">
+  <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
+    <a href="/claude-code-universe/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 返回首页</a>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">📝 补充资料</h1>
+    <p class="text-lg text-[var(--color-muted)] mb-10">深度笔记未覆盖的主题 — 启动流水线、并发执行、MCP 传输、远程控制等</p>
+    <div class="space-y-4">
+      {articles.map(a => (
+        <a href={`/claude-code-universe/supplements/${a.id}/`} class="block p-5 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline">
+          <h3 class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">{titles[a.id] || a.id}</h3>
+          <p class="text-sm text-[var(--color-muted)]">对应英文书对应章节 + Claude Code 生产源码对照 + 前端启示</p>
+        </a>
+      ))}
+    </div>
+  </main>
+</BaseLayout>
