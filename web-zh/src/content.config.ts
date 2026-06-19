@@ -25,8 +25,4 @@ const skills = defineCollection({
   loader: glob({ pattern: '**/SKILL.md', base: '../upstream/learn-claude-code/skills' }),
 });
 
-const sourceCode = defineCollection({
-  loader: glob({ pattern: 's*.py', base: '../upstream/learn-claude-code/agents' }),
-});
-
-export const collections = { chapters, deepdive, supplements, tutorial, philosophy, skills, sourceCode };
+export const collections = { chapters, deepdive, supplements, tutorial, philosophy, skills };
