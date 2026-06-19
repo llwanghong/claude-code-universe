@@ -1,24 +1,20 @@
 ---
 interface Props {
-  prev: { number: number; title: string } | null
-  next: { number: number; title: string } | null
+  prev: { number: number; title: string; slug: string } | null
+  next: { number: number; title: string; slug: string } | null
 }
 const { prev, next } = Astro.props
-
-function getSlug(num: number, _title: string): string {
-  return `ch${String(num).padStart(2, '0')}`
-}
 ---
 
 <nav class="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 flex justify-between gap-4">
   {prev ? (
-    <a href={`/claude-code-universe/${getSlug(prev.number, prev.title)}/`} class="group flex-1">
+    <a href={`/claude-code-universe/${prev.slug}/`} class="group flex-1 no-underline">
       <span class="text-xs text-gray-500 dark:text-gray-400">← 上一章</span>
       <span class="block text-sm font-medium text-blue-500 group-hover:text-blue-400 mt-1">{prev.title}</span>
     </a>
   ) : <div class="flex-1" />}
   {next ? (
-    <a href={`/claude-code-universe/${getSlug(next.number, next.title)}/`} class="group flex-1 text-right">
+    <a href={`/claude-code-universe/${next.slug}/`} class="group flex-1 text-right no-underline">
       <span class="text-xs text-gray-500 dark:text-gray-400">下一章 →</span>
       <span class="block text-sm font-medium text-blue-500 group-hover:text-blue-400 mt-1">{next.title}</span>
     </a>

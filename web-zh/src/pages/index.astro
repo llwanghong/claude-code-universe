@@ -14,19 +14,19 @@ import { parts, chapters } from '../book.config'
       </p>
 
       <div class="grid gap-4 md:grid-cols-2 mb-16">
-        <a href="/claude-code-universe/ch01/" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+        <a href="/claude-code-universe/ch01-architecture/" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left no-underline">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">📖 中文精译</h2>
           <p class="text-sm text-gray-500 dark:text-gray-400">Claude Code from Source 完整 18 章中文翻译，带交互式图表</p>
         </a>
-        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/deep-dive/README.md" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/deep-dive/README.md" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left no-underline">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">🔬 深度笔记</h2>
           <p class="text-sm text-gray-500 dark:text-gray-400">前端视角的 8 篇深度学习笔记</p>
         </a>
-        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/supplements/README.md" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/supplements/README.md" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left no-underline">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">📝 补充资料</h2>
           <p class="text-sm text-gray-500 dark:text-gray-400">7 篇补充文章，覆盖启动、并发、MCP 等主题</p>
         </a>
-        <a href="https://github.com/llwanghong/claude-code-universe" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+        <a href="https://github.com/llwanghong/claude-code-universe" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left no-underline">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">💻 GitHub 仓库</h2>
           <p class="text-sm text-gray-500 dark:text-gray-400">全部源代码、交叉索引、学习路线图</p>
         </a>
@@ -42,7 +42,7 @@ import { parts, chapters } from '../book.config'
                 {part.chapters.map(num => {
                   const ch = chapters.find(c => c.number === num)!
                   return (
-                    <a href={`/claude-code-universe/ch${String(num).padStart(2, '0')}/`} class="block text-sm text-gray-600 dark:text-gray-400 hover:text-blue-500 py-1">
+                    <a href={`/claude-code-universe/${ch.slug}/`} class="block text-sm text-gray-600 dark:text-gray-400 hover:text-blue-500 py-1 no-underline">
                       <span class="text-gray-400 mr-2">{num}.</span>{ch.title}
                     </a>
                   )

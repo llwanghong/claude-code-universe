@@ -1,50 +1,101 @@
 @import "tailwindcss";
 
+/* Tailwind Typography plugin for prose */
+@plugin "@tailwindcss/typography";
+
 @layer base {
-  html { @apply scroll-smooth; }
-  body { @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
 }
 
-/* Mermaid diagrams */
-.mermaid {
-  @apply my-8 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-x-auto;
+/* Chapter content typography */
+article {
+  @apply text-base leading-relaxed;
 }
 
-/* Table styles (Tailwind prose handles most, these are fallbacks) */
+article h2 {
+  @apply text-2xl font-bold mt-12 mb-4 text-gray-900 dark:text-white;
+}
+
+article h3 {
+  @apply text-xl font-semibold mt-8 mb-3 text-gray-900 dark:text-white;
+}
+
+article p {
+  @apply my-4 leading-relaxed;
+}
+
+/* Tables — these are the important fix */
 article table {
-  @apply w-full border-collapse my-6 text-sm;
+  @apply w-full border-collapse my-6;
 }
+
+article thead {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
 article th {
-  @apply border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 px-4 py-2 text-left font-semibold;
+  @apply border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-left text-sm font-semibold text-gray-900 dark:text-white;
 }
+
 article td {
-  @apply border border-gray-300 dark:border-gray-600 px-4 py-2;
+  @apply border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm align-top;
 }
+
 article tbody tr:nth-child(even) {
   @apply bg-gray-50 dark:bg-gray-900/50;
 }
 
-/* Code blocks */
+/* Code */
 article pre {
-  @apply rounded-lg p-4 overflow-x-auto text-sm leading-relaxed;
+  @apply bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg p-5 overflow-x-auto text-sm leading-relaxed my-6;
 }
 
-/* Inline code */
 article :not(pre) > code {
-  @apply bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 text-sm font-mono;
+  @apply bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded px-1.5 py-0.5 text-sm font-mono;
 }
 
 /* Blockquotes */
 article blockquote {
-  @apply border-l-4 border-blue-500 pl-4 py-1 my-4 bg-gray-50 dark:bg-gray-900/50 rounded-r;
+  @apply border-l-4 border-blue-500 bg-gray-50 dark:bg-gray-900/60 pl-5 py-3 my-6 rounded-r-lg;
 }
 
-/* Links */
+article blockquote p {
+  @apply my-1;
+}
+
+/* Links in content */
 article a {
-  @apply text-blue-500 hover:text-blue-400 underline decoration-blue-500/30 hover:decoration-blue-400;
+  @apply text-blue-600 dark:text-blue-400 underline decoration-blue-300 dark:decoration-blue-700 hover:decoration-blue-500;
 }
 
-/* Smooth scrolling for anchor links */
-html {
-  scroll-padding-top: 2rem;
+/* Mermaid diagrams */
+pre.mermaid {
+  @apply my-8 p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto;
+}
+
+/* Lists */
+article ul {
+  @apply list-disc pl-6 my-4 space-y-1;
+}
+
+article ol {
+  @apply list-decimal pl-6 my-4 space-y-1;
+}
+
+article li {
+  @apply leading-relaxed;
+}
+
+/* Horizontal rule */
+article hr {
+  @apply my-12 border-gray-200 dark:border-gray-800;
+}
+
+/* Images */
+article img {
+  @apply rounded-lg shadow-md my-6 max-w-full;
 }

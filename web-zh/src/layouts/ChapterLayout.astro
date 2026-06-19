@@ -3,43 +3,38 @@ import BaseLayout from './BaseLayout.astro'
 import Sidebar from '../components/Sidebar.astro'
 import TableOfContents from '../components/TableOfContents.astro'
 import ChapterNav from '../components/ChapterNav.astro'
+import type { Chapter } from '../book.config'
 
 interface Props {
   title: string
   slug: string
   chapterNumber: number
   headings: { depth: number; slug: string; text: string }[]
-  prev: { number: number; title: string } | null
-  next: { number: number; title: string } | null
+  prev: Chapter | null
+  next: Chapter | null
   part?: string
 }
 
-const { title, slug, chapterNumber, headings, prev, next, part } = Astro.props
+const { title, chapterNumber, headings, prev, next, part } = Astro.props
 ---
 
 <BaseLayout title={title}>
   <div class="flex min-h-screen">
     <Sidebar currentChapter={chapterNumber} />
     <main class="flex-1 min-w-0">
-      <div class="mx-auto max-w-4xl px-6 py-12 lg:px-8">
-        {part && <p class="text-sm font-medium text-blue-400 mb-2">{part}</p>}
-        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl mb-8">
-          <span class="text-blue-500">第 {chapterNumber} 章</span>
-          <span class="block mt-2">{title}</span>
+      <div class="mx-auto max-w-3xl px-6 py-12 lg:px-8 xl:px-12">
+        <!-- Chapter header -->
+        {part && <p class="text-sm font-medium text-blue-500 dark:text-blue-400 mb-2">{part}</p>}
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl mb-2">
+          第 {chapterNumber} 章
         </h1>
-        <article class="prose prose-gray dark:prose-invert max-w-none
-          prose-headings:scroll-mt-20 prose-headings:font-semibold
-          prose-table:border-collapse prose-table:w-full
-          prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600 prose-th:bg-gray-100 dark:prose-th:bg-gray-800 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:text-sm prose-th:font-semibold
-          prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-600 prose-td:px-4 prose-td:py-2 prose-td:text-sm
-          prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm
-          prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100
-          prose-a:text-blue-500 hover:prose-a:text-blue-400
-          prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-gray-900/50
-          prose-img:rounded-lg prose-img:shadow-md
-          prose-hr:border-gray-200 dark:prose-hr:border-gray-800">
+        <p class="text-xl text-gray-600 dark:text-gray-400 mb-10">{title}</p>
+
+        <!-- Chapter content -->
+        <article>
           <slot />
         </article>
+
         <ChapterNav prev={prev} next={next} />
       </div>
     </main>

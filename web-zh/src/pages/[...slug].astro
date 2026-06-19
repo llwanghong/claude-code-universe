@@ -1,7 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content'
 import ChapterLayout from '../layouts/ChapterLayout.astro'
-import { chapters, getPartForChapter, getAdjacentChapters, getChapterNumber } from '../book.config'
+import { chapters, getPartForChapter, getAdjacentChapters } from '../book.config'
 
 export async function getStaticPaths() {
   const entries = await getCollection('chapters')
@@ -14,9 +14,10 @@ export async function getStaticPaths() {
 const { entry } = Astro.props
 const { Content, headings } = await render(entry)
 
-const chapterNum = getChapterNumber(entry.id)
-const chapterMeta = chapters.find(c => c.number === chapterNum)
-const part = getPartForChapter(chapterNum)
+// Match entry.id (e.g. "ch01-architecture") to chapter config
+const chapterMeta = chapters.find(c => c.slug === entry.id)
+const chapterNum = chapterMeta?.number ?? 0
+const part = chapterNum ? getPartForChapter(chapterNum) : undefined
 const { prev, next } = getAdjacentChapters(chapterNum)
 ---
 
