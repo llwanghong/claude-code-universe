@@ -1,31 +1,27 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getCollection } from 'astro:content';
 
-const steps = await getCollection('tutorial');
-steps.sort((a, b) => a.id.localeCompare(b.id));
-
-const titles: Record<string, string> = {
-  's01-the-agent-loop': 'Agent Loop — 核心循环',
-  's02-tool-use': 'Tool System — 工具系统',
-  's03-todo-write': 'TodoWrite — 任务规划',
-  's04-subagent': 'Subagent — 子代理',
-  's05-skill-loading': 'Skill Loading — 技能加载',
-  's06-context-compact': 'Context Compaction — 上下文压缩',
-  's07-task-system': 'Task System — 持久化任务',
-  's08-background-tasks': 'Background Tasks — 后台任务',
-  's09-agent-teams': 'Agent Teams — 团队协作',
-  's10-team-protocols': 'Team Protocols — 团队协议',
-  's11-autonomous-agents': 'Autonomous Agents — 自主代理',
-  's12-worktree-task-isolation': 'Worktree Isolation — 目录隔离',
-};
+const steps = [
+  { num: '01', slug: 's01-the-agent-loop', title: 'Agent Loop — 核心循环', py: 's01_agent_loop.py', deep: 'Agent 本质 + Agent Loop（教学版 vs query.ts）' },
+  { num: '02', slug: 's02-tool-use', title: 'Tool System — 工具系统', py: 's02_tool_use.py', deep: 'dispatch map → 44工具工业引擎' },
+  { num: '03', slug: 's03-todo-write', title: 'TodoWrite — 任务规划', py: 's03_todo_write.py', deep: '模型自我追踪 + nag reminder' },
+  { num: '04', slug: 's04-subagent', title: 'Subagent — 子代理', py: 's04_subagent.py', deep: 'fresh context + filtered tools + summary-only' },
+  { num: '05', slug: 's05-skill-loading', title: 'Skill Loading — 技能加载', py: 's05_skill_loading.py', deep: '两阶段注入：元数据 → 按需完整加载' },
+  { num: '06', slug: 's06-context-compact', title: 'Context Compaction — 上下文压缩', py: 's06_context_compact.py', deep: '三层压缩 → 五层生产流水线' },
+  { num: '07', slug: 's07-task-system', title: 'Task System — 持久化任务', py: 's07_task_system.py', deep: 'JSON文件 + blockedBy依赖图' },
+  { num: '08', slug: 's08-background-tasks', title: 'Background Tasks — 后台任务', py: 's08_background_tasks.py', deep: '线程池 → notification queue → 轮询注入' },
+  { num: '09', slug: 's09-agent-teams', title: 'Agent Teams — 团队协作', py: 's09_agent_teams.py', deep: 'JSONL inbox → Swarm 多Backend' },
+  { num: '10', slug: 's10-team-protocols', title: 'Team Protocols — 团队协议', py: 's10_team_protocols.py', deep: 'request_id 关联 + shutdown/plan FSM' },
+  { num: '11', slug: 's11-autonomous-agents', title: 'Autonomous Agents — 自主代理', py: 's11_autonomous_agents.py', deep: 'idle poll → Cron 定时唤醒' },
+  { num: '12', slug: 's12-worktree-task-isolation', title: 'Worktree Isolation — 目录隔离', py: 's12_worktree_task_isolation.py', deep: 'git worktree + task 绑定' },
+];
 ---
 
 <BaseLayout title="动手实践" description="12 步渐进式 Agent Harness 教程">
   <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
     <a href="/claude-code-universe/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 返回首页</a>
     <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🛠️ 动手实践</h1>
-    <p class="text-lg text-[var(--color-muted)] mb-8">基于 <a href="https://github.com/shareAI-lab/learn-claude-code" class="text-[var(--color-terracotta)]">shareAI-lab/learn-claude-code</a> — 完整的 Agent Harness 工程教学仓库</p>
+    <p class="text-lg text-[var(--color-muted)] mb-8">基于 <a href="https://github.com/shareAI-lab/learn-claude-code" class="text-[var(--color-terracotta)]">shareAI-lab/learn-claude-code</a></p>
 
     <!-- Resource cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
@@ -37,56 +33,46 @@ const titles: Record<string, string> = {
       <a href="/claude-code-universe/tutorial/skills/" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
         <span class="text-2xl block mb-2">🎯</span>
         <span class="text-sm font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">内置技能</span>
-        <span class="text-xs text-[var(--color-muted)] block mt-1">4 个 Skill 示例</span>
+        <span class="text-xs text-[var(--color-muted)] block mt-1">4 个 SKILL 示例</span>
       </a>
       <a href="https://github.com/shareAI-lab/learn-claude-code/tree/main/agents" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
         <span class="text-2xl block mb-2">🐍</span>
         <span class="text-sm font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">Python 源码</span>
-        <span class="text-xs text-[var(--color-muted)] block mt-1">14 个可运行文件</span>
+        <span class="text-xs text-[var(--color-muted)] block mt-1">14 个文件</span>
       </a>
       <a href="https://github.com/shareAI-lab/learn-claude-code" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
         <span class="text-2xl block mb-2">📦</span>
         <span class="text-sm font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">原始仓库</span>
-        <span class="text-xs text-[var(--color-muted)] block mt-1">查看完整代码</span>
+        <span class="text-xs text-[var(--color-muted)] block mt-1">完整代码</span>
       </a>
     </div>
 
     <h2 class="text-xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">12 步渐进教程</h2>
-    <p class="text-base text-[var(--color-muted)] mb-6">从 120 行的 Agent Loop 到完整的自主 Agent 系统。每步都是可以跑的代码，每一步只增加一个概念。</p>
+    <p class="text-base text-[var(--color-muted)] mb-6">从 120 行的 Agent Loop 到完整自主 Agent。每一步只增加一个概念，每步都是可运行代码。</p>
 
     <div class="space-y-2">
-      {steps.map((s, i) => {
-        const num = s.id.match(/s(\d+)/)?.[1] || '';
-        // Map tutorial steps to our deep-dive articles
-        const deepRefs: Record<string, string> = {
-          '01': 'Agent 本质 + Agent Loop（教学版 vs query.ts）',
-          '02': 'Tool System（dispatch map → 44工具工业引擎）',
-          '03': 'TodoWrite + Subagent（递归调用同一个 query()）',
-          '04': 'Subagent 上下文隔离（fresh context + filtered tools）',
-          '05': 'Skill Loading + Context Compaction（按需加载 + 5层压缩）',
-          '06': '三层压缩 → 五层压缩流水线',
-          '07': '持久化任务 + 异步执行（JSON文件 → 8种Task类型）',
-          '08': 'Background Tasks（线程池 → notification queue）',
-          '09': 'Agent Teams（JSONL inbox → Swarm 多Backend）',
-          '10': 'Team Protocols（request_id 关联 + shutdown FSM）',
-          '11': 'Autonomous Agents（idle poll → Cron 定时唤醒）',
-          '12': 'Worktree Isolation（git worktree + 并行安全）',
-        };
-        return (
-          <a href={`/claude-code-universe/tutorial/${s.id}/`} class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group">
-            <span class="text-sm font-mono text-[var(--color-terracotta)] mt-0.5 shrink-0 w-8 text-right">{i + 1}</span>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">
-                  {titles[s.id] || s.id}
-                </span>
-                <span class="text-xs text-[var(--color-muted)] font-mono shrink-0">{s.id.replace('.md', '.py')}</span>
-              </div>
-              <p class="text-xs text-[var(--color-muted)] mt-1">{deepRefs[num] || ''}</p>
+      {steps.map((s, i) => (
+        <div class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333]">
+          <span class="text-sm font-mono text-[var(--color-terracotta)] mt-0.5 shrink-0 w-8 text-right">{i + 1}</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">{s.title}</span>
+              <span class="text-xs text-[var(--color-muted)] font-mono shrink-0">{s.py}</span>
             </div>
-          </a>
-        );
-      })}
+            <p class="text-xs text-[var(--color-muted)] mt-1">🔬 {s.deep}</p>
+            <div class="flex gap-3 mt-2 text-xs">
+              <a href={`https://github.com/shareAI-lab/learn-claude-code/blob/main/docs/zh/${s.slug}.md`} class="text-[var(--color-terracotta)] hover:underline">📖 文档</a>
+              <a href={`https://github.com/shareAI-lab/learn-claude-code/blob/main/agents/${s.py}`} class="text-[var(--color-terracotta)] hover:underline">🐍 源码</a>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="mt-8 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333]">
+      <p class="text-sm text-[var(--color-muted)]">
+        💡 <strong>本地运行</strong>：<code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">git clone --recurse-submodules https://github.com/llwanghong/claude-code-universe</code>，然后 <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">cd upstream/learn-claude-code && python agents/s01_agent_loop.py</code>
+      </p>
     </div>
   </main>
 </BaseLayout>
