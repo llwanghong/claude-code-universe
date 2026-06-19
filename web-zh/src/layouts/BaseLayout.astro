@@ -58,28 +58,9 @@ const { title, description } = Astro.props;
       document.getElementById('theme-toggle')?.addEventListener('click', () => {
         const isDark = document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        // Re-render mermaid if needed
-        if (typeof mermaid !== 'undefined') {
-          mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default', securityLevel: 'loose' });
-          mermaid.run();
-        }
       });
     </script>
 
     <slot />
-
-    <!-- Mermaid.js for diagram rendering -->
-    <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-      const isDark = document.documentElement.classList.contains('dark');
-      mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default', securityLevel: 'loose' });
-      // Re-render on theme change
-      const observer = new MutationObserver(() => {
-        const dark = document.documentElement.classList.contains('dark');
-        mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
-        mermaid.run();
-      });
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    </script>
   </body>
 </html>

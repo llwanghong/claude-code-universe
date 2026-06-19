@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar.astro';
 import TableOfContents from '../components/TableOfContents.astro';
 import ChapterNav from '../components/ChapterNav.astro';
 import ReadingProgress from '../components/ReadingProgress.astro';
+import InteractiveDiagrams from '../components/InteractiveDiagrams.astro';
 import { type ChapterConfig, type PartConfig, isFirstChapterOfPart } from '../book.config';
 
 interface Heading {
@@ -47,6 +48,8 @@ const showPartHeader = part && isFirstChapterOfPart(chapterNumber);
       <article class="chapter-prose">
         <slot />
       </article>
+
+      <InteractiveDiagrams chapterNumber={chapterNumber} />
 
       <ChapterNav prev={prev} next={next} />
     </main>
