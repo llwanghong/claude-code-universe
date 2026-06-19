@@ -1,7 +1,15 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
-const steps = [
+interface Step {
+  num: string;
+  slug: string;
+  title: string;
+  py: string;
+  deep: string;
+}
+
+const steps: Step[] = [
   { num: '01', slug: 's01-the-agent-loop', title: 'Agent Loop — 核心循环', py: 's01_agent_loop.py', deep: 'Agent 本质 + Agent Loop（教学版 vs query.ts）' },
   { num: '02', slug: 's02-tool-use', title: 'Tool System — 工具系统', py: 's02_tool_use.py', deep: 'dispatch map → 44工具工业引擎' },
   { num: '03', slug: 's03-todo-write', title: 'TodoWrite — 任务规划', py: 's03_todo_write.py', deep: '模型自我追踪 + nag reminder' },
@@ -23,7 +31,6 @@ const steps = [
     <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🛠️ 动手实践</h1>
     <p class="text-lg text-[var(--color-muted)] mb-8">基于 <a href="https://github.com/shareAI-lab/learn-claude-code" class="text-[var(--color-terracotta)]">shareAI-lab/learn-claude-code</a></p>
 
-    <!-- Resource cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
       <a href="/claude-code-universe/tutorial/philosophy/" class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline text-center">
         <span class="text-2xl block mb-2">📜</span>
@@ -71,7 +78,7 @@ const steps = [
 
     <div class="mt-8 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333]">
       <p class="text-sm text-[var(--color-muted)]">
-        💡 <strong>本地运行</strong>：<code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">git clone --recurse-submodules https://github.com/llwanghong/claude-code-universe</code>，然后 <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">cd upstream/learn-claude-code && python agents/s01_agent_loop.py</code>
+        💡 <strong>本地运行</strong>：克隆仓库后 <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">cd upstream/learn-claude-code && python agents/s01_agent_loop.py</code>
       </p>
     </div>
   </main>
