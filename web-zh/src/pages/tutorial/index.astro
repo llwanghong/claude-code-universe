@@ -1,0 +1,45 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const steps = await getCollection('tutorial');
+steps.sort((a, b) => a.id.localeCompare(b.id));
+
+const titles: Record<string, string> = {
+  's01-the-agent-loop': 'Agent Loop — 核心循环',
+  's02-tool-use': 'Tool System — 工具系统',
+  's03-todo-write': 'TodoWrite — 任务规划',
+  's04-subagent': 'Subagent — 子代理',
+  's05-skill-loading': 'Skill Loading — 技能加载',
+  's06-context-compact': 'Context Compaction — 上下文压缩',
+  's07-task-system': 'Task System — 持久化任务',
+  's08-background-tasks': 'Background Tasks — 后台任务',
+  's09-agent-teams': 'Agent Teams — 团队协作',
+  's10-team-protocols': 'Team Protocols — 团队协议',
+  's11-autonomous-agents': 'Autonomous Agents — 自主代理',
+  's12-worktree-task-isolation': 'Worktree Isolation — 目录隔离',
+};
+---
+
+<BaseLayout title="动手实践" description="12 步渐进式 Agent Harness 教程">
+  <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
+    <a href="/claude-code-universe/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 返回首页</a>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🛠️ 动手实践</h1>
+    <p class="text-lg text-[var(--color-muted)] mb-2">基于 <a href="https://github.com/shareAI-lab/learn-claude-code" class="text-[var(--color-terracotta)]">shareAI-lab/learn-claude-code</a></p>
+    <p class="text-base text-[var(--color-muted)] mb-10">12 步渐进式 Python 教程 — 从 120 行的 Agent Loop 到完整的自主 Agent 系统。每步都是可以跑的代码，每一步只增加一个概念。</p>
+
+    <div class="space-y-2">
+      {steps.map((s, i) => (
+        <a href={`/claude-code-universe/tutorial/${s.id}/`} class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group">
+          <span class="text-sm font-mono text-[var(--color-terracotta)] mt-0.5 shrink-0 w-8 text-right">{i + 1}</span>
+          <div>
+            <span class="font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">
+              {titles[s.id] || s.id}
+            </span>
+            <span class="text-xs text-[var(--color-muted)] ml-2 font-mono">{s.id.replace('.md', '.py')}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </main>
+</BaseLayout>

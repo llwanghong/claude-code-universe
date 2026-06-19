@@ -1,131 +1,91 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { parts, chapters } from '../book.config';
 
-const rawBase = import.meta.env.BASE_URL;
-const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
+const sections = [
+  {
+    icon: '📖', title: '架构分析',
+    desc: 'Claude Code 生产级架构的完整解析。18 章，6 大抽象，从 Agent Loop 到 Swarm 协作。',
+    href: '/claude-code-universe/ch01-architecture/',
+    stat: '18 章 · 7 部分',
+  },
+  {
+    icon: '🛠️', title: '动手实践',
+    desc: '12 步渐进式 Python 教程。每一步只增加一个概念，从 120 行的核心循环到完整自主 Agent。',
+    href: '/claude-code-universe/tutorial/',
+    stat: '12 步 · 可运行代码',
+  },
+  {
+    icon: '🔬', title: '深度笔记',
+    desc: '前端 Harness 工程师视角。教学版 vs 生产版逐层对照，每个模块附前端可操作启示。',
+    href: '/claude-code-universe/deep-dive/',
+    stat: '8 篇 · 三层对照',
+  },
+  {
+    icon: '📝', title: '补充资料',
+    desc: '深度笔记未覆盖的主题：Bootstrap 流水线、并发执行、MCP 传输、终端 UI、性能工程。',
+    href: '/claude-code-universe/supplements/',
+    stat: '7 篇 · 源码对照',
+  },
+];
 ---
 
-<BaseLayout
-  title="Claude Code 学习宇宙"
-  description="三个视角，一个架构 — AI 编程 Agent 的完整学习体系"
->
+<BaseLayout title="Claude Code 学习宇宙" description="三份资源，一个知识体系">
   <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
 
     <!-- Hero -->
-    <div class="text-center mb-20">
-      <h1 class="text-3xl md:text-4xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6 leading-tight">
-        Claude Code 源码深度解析
+    <div class="text-center mb-16">
+      <h1 class="text-4xl md:text-5xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6 leading-tight">
+        Claude Code<br class="md:hidden" /> 学习宇宙
       </h1>
-      <p class="text-lg text-[var(--color-secondary)] dark:text-[var(--color-muted)] max-w-2xl mx-auto leading-relaxed mb-6">
-        Anthropic 的生产级 AI 编程 Agent 内部架构分析。18 章、6 大抽象、10 个核心模式 — 从 Agent Loop 到 Swarm 协作，从前端工程师的视角理解 AI Agent 系统设计。
+      <p class="text-lg text-[var(--color-secondary)] dark:text-[var(--color-muted)] max-w-2xl mx-auto leading-relaxed">
+        整合三份独立资源为一个结构化知识体系，帮你从前端工程师成长为能独立设计 Agent 系统的 Harness 工程师。
       </p>
-      <a
-        href={`${base}${chapters[0].slug}/`}
-        class="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-terracotta)] text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
-      >
-        开始阅读
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-      </a>
     </div>
 
-    <!-- What You'll Learn -->
-    <section class="mb-20">
-      <h2 class="text-2xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-8">
-        你将学到什么
-      </h2>
-      <div class="grid md:grid-cols-2 gap-6">
-        {[
-          { title: 'Agent 循环', text: '一个 async generator 如何驱动整个系统 — 流式模型输出、执行工具、错误恢复、跨 4 层压缩上下文。' },
-          { title: '工具系统', text: '从模型请求到工具结果的 14 步执行流水线。权限解析、推测执行、按安全分类并发批处理。' },
-          { title: '多 Agent 编排', text: '子 Agent 如何共享 prompt cache 前缀以削减 95% 成本。Fork Agent、协调器模式、Swarm 团队与 mailbox 消息。' },
-          { title: '无数据库的记忆系统', text: '基于文件的记忆，LLM 驱动的召回。四种记忆类型、过时警告、Sonnet 侧面查询胜过嵌入搜索。' },
-          { title: '性能工程', text: '240ms 启动（并行 I/O）。Slot 预留节省 99% 请求的上下文。位图预过滤器用于模糊搜索。每毫秒都被计算在内。' },
-          { title: '可扩展性与安全', text: '两阶段 skill 加载。27 个生命周期 hooks，启动时快照配置防止注入攻击。' },
-        ].map(({ title, text }) => (
-          <div class="p-5 rounded-lg border border-[var(--color-border)] dark:border-[#333]">
-            <h3 class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-2">{title}</h3>
-            <p class="text-sm text-[var(--color-secondary)] dark:text-[var(--color-muted)] leading-relaxed">{text}</p>
+    <!-- Four tracks -->
+    <div class="grid md:grid-cols-2 gap-4 mb-16">
+      {sections.map(s => (
+        <a href={s.href} class="block p-6 rounded-xl border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">{s.icon}</span>
+            <h2 class="text-lg font-bold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">{s.title}</h2>
           </div>
-        ))}
-      </div>
-    </section>
+          <p class="text-sm text-[var(--color-secondary)] dark:text-[var(--color-muted)] leading-relaxed mb-3">{s.desc}</p>
+          <span class="text-xs font-medium text-[var(--color-terracotta)]">{s.stat}</span>
+        </a>
+      ))}
+    </div>
 
-    <!-- Who This Is For -->
-    <section class="mb-20">
-      <h2 class="text-2xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6">
-        适合谁读
-      </h2>
-      <div class="space-y-4 text-[var(--color-secondary)] dark:text-[var(--color-muted)]">
-        <p><strong class="text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">构建 Agent 系统的工程师。</strong>每章结尾有 5 个可转移模式及具体适配建议。拿走架构，跳过错误。</p>
-        <p><strong class="text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">评估架构的技术负责人。</strong>不必读完每个代码块也能理解叙事。理解为什么做决策，而不仅是做了什么。</p>
-        <p><strong class="text-[var(--color-charcoal)] dark:text-[var(--color-cream)]">对生产级 AI 工具内部运作好奇的人。</strong>Claude Code 被数十万开发者使用。这书讲的是它底层的运作方式。</p>
-      </div>
-    </section>
-
-    <!-- Table of Contents -->
-    <section class="mb-20">
-      <h2 class="text-2xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-8">
-        目录
-      </h2>
-      {parts.map((part) => {
-        const partChapters = chapters.filter(c => part.chapters.includes(c.number));
-        return (
-          <div class="mb-10">
-            <div class="flex items-baseline gap-3 mb-1">
-              <span class="text-xs font-semibold uppercase tracking-wider text-[var(--color-terracotta)]">第 {part.number} 部分</span>
-              <h3 class="text-lg font-bold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] font-[var(--font-serif)]">{part.title}</h3>
-            </div>
-            <p class="text-sm italic text-[var(--color-muted)] mb-4">{part.epigraph}</p>
-
-            <div class="space-y-2">
-              {partChapters.map((ch) => (
-                <a
-                  href={`${base}${ch.slug}/`}
-                  class="group flex items-start gap-3 p-3 -mx-3 rounded-lg hover:bg-[var(--color-beige)] dark:hover:bg-[var(--color-dark-surface)] transition-colors"
-                >
-                  <span class="text-sm font-mono text-[var(--color-muted)] mt-0.5 w-6 shrink-0 text-right">{ch.number}</span>
-                  <div>
-                    <span class="text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] font-medium transition-colors">
-                      {ch.title}
-                    </span>
-                    <p class="text-sm text-[var(--color-muted)] mt-0.5">{ch.description}</p>
-                  </div>
-                </a>
-              ))}
-            </div>
+    <!-- Knowledge Map -->
+    <div class="mb-16 p-8 rounded-xl border border-[var(--color-border)] dark:border-[#333] bg-[var(--color-beige)]/30 dark:bg-transparent">
+      <h2 class="text-xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6 text-center">知识体系</h2>
+      <div class="space-y-4 text-sm leading-relaxed">
+        <div class="flex flex-col md:flex-row gap-4 justify-center text-center">
+          <div class="flex-1 p-4 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
+            <p class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">📖 架构分析</p>
+            <p class="text-[var(--color-muted)] text-xs">理解 "是什么"<br/>生产级架构全貌</p>
           </div>
-        );
-      })}
-    </section>
-
-    <!-- Additional Resources -->
-    <section class="mb-20">
-      <h2 class="text-2xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6">
-        更多资源
-      </h2>
-      <div class="grid md:grid-cols-3 gap-4">
-        <a href="/claude-code-universe/deep-dive/" class="block p-5 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors">
-          <h3 class="font-semibold mb-1">🔬 深度笔记</h3>
-          <p class="text-sm text-[var(--color-muted)]">前端视角的 8 篇学习笔记，源码对照 + 前端启示</p>
-        </a>
-        <a href="/claude-code-universe/supplements/" class="block p-5 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors">
-          <h3 class="font-semibold mb-1">📝 补充资料</h3>
-          <p class="text-sm text-[var(--color-muted)]">启动、并发、MCP 等 7 篇主题文章</p>
-        </a>
-        <a href="https://github.com/llwanghong/claude-code-universe" class="block p-5 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors">
-          <h3 class="font-semibold mb-1">💻 GitHub</h3>
-          <p class="text-sm text-[var(--color-muted)]">完整仓库 + 交叉索引 + 学习路线</p>
-        </a>
+          <div class="text-[var(--color-muted)] self-center text-2xl hidden md:block">→</div>
+          <div class="flex-1 p-4 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
+            <p class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">🛠️ 动手实践</p>
+            <p class="text-[var(--color-muted)] text-xs">理解 "怎么做"<br/>12 步渐进实现</p>
+          </div>
+          <div class="text-[var(--color-muted)] self-center text-2xl hidden md:block">→</div>
+          <div class="flex-1 p-4 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
+            <p class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">🔬 深度笔记</p>
+            <p class="text-[var(--color-muted)] text-xs">理解 "为什么"<br/>教学 vs 生产对照</p>
+          </div>
+        </div>
+        <p class="text-center text-xs text-[var(--color-muted)] pt-2">
+          📝 补充资料贯穿其中，填补主题空白（Bootstrap / 并发 / MCP / 终端 / 性能）
+        </p>
       </div>
-    </section>
+    </div>
 
     <!-- Footer -->
-    <footer class="text-center text-sm text-[var(--color-muted)] mt-16 pt-8 border-t border-[var(--color-border)] dark:border-[#333]">
-      <p>中文翻译 · 学习笔记 · 深度分析</p>
-      <p class="mt-1">Built with Astro · 基于 <a href="https://claude-code-from-source.com" class="text-[var(--color-terracotta)] hover:underline">Claude Code from Source</a></p>
+    <footer class="text-center text-sm text-[var(--color-muted)] pt-8 border-t border-[var(--color-border)] dark:border-[#333]">
+      <p>架构分析 · 动手实践 · 深度笔记 · 补充资料</p>
+      <p class="mt-1"><a href="https://github.com/llwanghong/claude-code-universe" class="text-[var(--color-terracotta)] hover:underline">GitHub 仓库</a> · 持续更新</p>
     </footer>
   </main>
 </BaseLayout>

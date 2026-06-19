@@ -1,0 +1,40 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('tutorial');
+  return entries.map(e => ({ params: { slug: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const titles: Record<string, string> = {
+  's01-the-agent-loop': 'Agent Loop — 核心循环',
+  's02-tool-use': 'Tool System — 工具系统',
+  's03-todo-write': 'TodoWrite — 任务规划',
+  's04-subagent': 'Subagent — 子代理',
+  's05-skill-loading': 'Skill Loading — 技能加载',
+  's06-context-compact': 'Context Compaction — 上下文压缩',
+  's07-task-system': 'Task System — 持久化任务',
+  's08-background-tasks': 'Background Tasks — 后台任务',
+  's09-agent-teams': 'Agent Teams — 团队协作',
+  's10-team-protocols': 'Team Protocols — 团队协议',
+  's11-autonomous-agents': 'Autonomous Agents — 自主代理',
+  's12-worktree-task-isolation': 'Worktree Isolation — 目录隔离',
+};
+
+const num = entry.id.match(/s(\d+)/)?.[1] || '';
+---
+
+<BaseLayout title={`${titles[entry.id] || entry.id} — 动手实践`} description="">
+  <main class="max-w-3xl mx-auto px-4 md:px-8 py-12">
+    <a href="/claude-code-universe/tutorial/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 动手实践</a>
+    <p class="text-sm text-[var(--color-terracotta)] font-mono mb-1">第 {num} 步 · s{num}_*.py</p>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-8">{titles[entry.id] || entry.id}</h1>
+    <article class="chapter-prose">
+      <Content />
+    </article>
+  </main>
+</BaseLayout>
