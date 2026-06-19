@@ -1,14 +1,23 @@
-import { defineConfig } from 'astro/config'
-import tailwindcss from '@tailwindcss/vite'
-import remarkMermaid from './src/plugins/remark-mermaid.mjs'
+import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
+import tailwindcss from '@tailwindcss/vite';
+import remarkMermaidRaw from './src/plugins/remark-mermaid-raw.mjs';
 
 export default defineConfig({
   base: '/claude-code-universe/',
   site: 'https://llwanghong.github.io',
+  integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
   },
   markdown: {
-    remarkPlugins: [remarkMermaid],
+    shikiConfig: {
+      themes: {
+        light: 'github-light',
+        dark: 'github-dark',
+      },
+    },
+    remarkPlugins: [remarkMermaidRaw],
   },
-})
+  output: 'static',
+});
