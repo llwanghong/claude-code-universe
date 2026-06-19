@@ -12,7 +12,7 @@ const { title, description } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -32,5 +32,19 @@ const { title, description } = Astro.props;
   </head>
   <body class="min-h-screen">
     <slot />
+
+    <!-- Mermaid.js for diagram rendering -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      const isDark = document.documentElement.classList.contains('dark');
+      mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default', securityLevel: 'loose' });
+      // Re-render on theme change
+      const observer = new MutationObserver(() => {
+        const dark = document.documentElement.classList.contains('dark');
+        mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
+        mermaid.run();
+      });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    </script>
   </body>
 </html>

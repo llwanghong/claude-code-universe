@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
-import remarkMermaidRaw from './src/plugins/remark-mermaid-raw.mjs';
+import remarkMermaid from './src/plugins/remark-mermaid.mjs';
 
 export default defineConfig({
   base: '/claude-code-universe/',
@@ -17,7 +17,7 @@ export default defineConfig({
         dark: 'github-dark',
       },
     },
-    remarkPlugins: [remarkMermaidRaw],
+    remarkPlugins: [remarkMermaid],
   },
   output: 'static',
 });

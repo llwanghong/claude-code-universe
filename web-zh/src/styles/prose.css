@@ -219,3 +219,14 @@ html.dark .copy-button {
   background-color: var(--color-dark-surface);
   border-color: #444;
 }
+
+/* Mermaid diagrams */
+pre.mermaid {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: transparent;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
