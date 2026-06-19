@@ -20,17 +20,21 @@
 
 ## 快速开始
 
+> 💡 **注意**：`upstream/` 目录是 git submodule，在 GitHub Web 上不可直接浏览。英文原版请点击下方外部链接。
+
 ### 如果你是前端工程师，想理解 AI Agent
 → 从 [深度笔记](./deep-dive/README.md) 开始，然后看 [学习路线图](./deep-dive/learning-roadmap.md)
 
-### 如果你是后端架构师，想评估 Agent 框架
-→ 从 [这本书](./upstream/claude-code-from-source/book/) 开始 — 第一章就给出了 6 大抽象
+### 如果想要完整的中文体系
+→ 从 [中文翻译](./book-zh/README.md) 开始（18 章完整中文版，可直接在 GitHub 上阅读）
+
+### 如果你想要英文原版
+→ [Claude Code from Source 在线版](https://claude-code-from-source.com) | [GitHub 原文](https://github.com/alejandrobalderas/claude-code-from-source/blob/main/book/ch01-architecture.md)
+→ [Learn Claude Code 原文](https://github.com/shareAI-lab/learn-claude-code)（12 步 Python 教程，自带中英日文档）
 
 ### 如果你想先动手写代码
-→ 从 [Learn Claude Code](./upstream/learn-claude-code/) 开始 — `s01_agent_loop.py` 只有 120 行
-
-### 如果你想要完整的中文资料
-→ 从 [中文翻译](./book-zh/README.md) 开始
+→ Clone 本仓库：`git clone --recurse-submodules https://github.com/llwanghong/claude-code-universe.git`
+→ 然后 `cd upstream/learn-claude-code && python agents/s01_agent_loop.py`
 
 ## 全景架构
 

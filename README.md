@@ -20,17 +20,21 @@ This repository combines three independent resources into one structured learnin
 
 ## Quick Start
 
+> 💡 **Note**: `upstream/` directories are git submodules — not browsable on GitHub Web. Use the external links below for English originals.
+
 ### If you're a frontend engineer wanting to understand AI agents
 → Start with [Deep Dive Notes](./deep-dive/README.md), then [Learning Roadmap](./deep-dive/learning-roadmap.md)
 
-### If you're a backend architect evaluating agent frameworks
-→ Start with [the Book](./upstream/claude-code-from-source/book/) — Chapter 1 gives you the 6 abstractions
+### If you want the complete Chinese package
+→ Start with [Chinese Translations](./book-zh/README.md) (18 chapters, browsable directly on GitHub)
+
+### If you want the original English book
+→ [Online at claude-code-from-source.com](https://claude-code-from-source.com) | [GitHub source](https://github.com/alejandrobalderas/claude-code-from-source/blob/main/book/ch01-architecture.md)
+→ [Learn Claude Code](https://github.com/shareAI-lab/learn-claude-code) (12-step Python tutorial with CN/EN/JP docs)
 
 ### If you want hands-on code first
-→ Start with [Learn Claude Code](./upstream/learn-claude-code/) — `s01_agent_loop.py` is 120 lines
-
-### If you want everything in Chinese
-→ Start with [中文翻译](./book-zh/README.md) + [中文入口](./README-zh.md)
+→ Clone with submodules: `git clone --recurse-submodules https://github.com/llwanghong/claude-code-universe.git`
+→ Then `cd upstream/learn-claude-code && python agents/s01_agent_loop.py`
 
 ## The Big Picture
 
