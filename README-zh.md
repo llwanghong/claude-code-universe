@@ -69,6 +69,8 @@ git submodule update --init --recursive
 
 GitHub Actions 每周自动检查上游变更。
 
+**如何触发更新**：见 [更新指南](./UPDATE_GUIDE.md) — 告诉我"书更新了"或"检查更新"，我会自动同步所有内容。
+
 ## 免责声明
 
 本仓库不包含任何 Claude Code 源代码。所有原创内容中的代码块都是为了说明架构模式而撰写的伪代码。`.reference/` 目录已被 gitignore，仅包含本地参考资料。

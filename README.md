@@ -69,6 +69,8 @@ git submodule update --init --recursive
 
 GitHub Actions runs a weekly check for upstream changes.
 
+**How to trigger updates**: See [Update Guide](./UPDATE_GUIDE.md) — tell me "sync the book" or "check for updates" and I'll handle everything automatically.
+
 ## Disclaimer
 
 This repository does not contain any source code from Claude Code. All code blocks in original content are pseudocode written to illustrate architectural patterns. The `.reference/` directory is gitignored and contains local-only reference material.
