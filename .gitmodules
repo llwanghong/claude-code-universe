@@ -1,0 +1,6 @@
+[submodule "upstream/learn-claude-code"]
+	path = upstream/learn-claude-code
+	url = https://github.com/shareAI-lab/learn-claude-code.git
+[submodule "upstream/claude-code-from-source"]
+	path = upstream/claude-code-from-source
+	url = https://github.com/alejandrobalderas/claude-code-from-source.git

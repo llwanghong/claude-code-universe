@@ -1,0 +1,13 @@
+# Local reference — never commit Anthropic source code
+.reference/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
