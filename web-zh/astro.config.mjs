@@ -1,12 +1,10 @@
 import { defineConfig } from 'astro/config';
-import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import remarkMermaid from './src/plugins/remark-mermaid.mjs';
 
 export default defineConfig({
   base: '/claude-code-universe/',
   site: 'https://llwanghong.github.io',
-  integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
   },
