@@ -17,12 +17,4 @@ const tutorial = defineCollection({
   loader: glob({ pattern: 's*.md', base: '../upstream/learn-claude-code/docs/zh' }),
 });
 
-const philosophy = defineCollection({
-  loader: glob({ pattern: 'README-zh.md', base: '../upstream/learn-claude-code' }),
-});
-
-const skills = defineCollection({
-  loader: glob({ pattern: '**/SKILL.md', base: '../upstream/learn-claude-code/skills' }),
-});
-
-export const collections = { chapters, deepdive, supplements, tutorial, philosophy, skills };
+export const collections = { chapters, deepdive, supplements, tutorial };
