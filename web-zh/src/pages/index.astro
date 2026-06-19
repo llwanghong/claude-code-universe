@@ -1,0 +1,61 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import { parts, chapters } from '../book.config'
+---
+
+<BaseLayout title="Claude Code 学习宇宙">
+  <div class="min-h-screen flex items-center justify-center px-6">
+    <div class="max-w-3xl mx-auto text-center py-20">
+      <h1 class="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+        Claude Code 学习宇宙
+      </h1>
+      <p class="text-xl text-gray-500 dark:text-gray-400 mb-12">
+        三个视角，一个架构 — AI 编程 Agent 的完整学习体系
+      </p>
+
+      <div class="grid gap-4 md:grid-cols-2 mb-16">
+        <a href="/claude-code-universe/ch01/" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">📖 中文精译</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Claude Code from Source 完整 18 章中文翻译，带交互式图表</p>
+        </a>
+        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/deep-dive/README.md" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">🔬 深度笔记</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">前端视角的 8 篇深度学习笔记</p>
+        </a>
+        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/supplements/README.md" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">📝 补充资料</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">7 篇补充文章，覆盖启动、并发、MCP 等主题</p>
+        </a>
+        <a href="https://github.com/llwanghong/claude-code-universe" class="block p-6 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-blue-500 transition-colors text-left">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">💻 GitHub 仓库</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">全部源代码、交叉索引、学习路线图</p>
+        </a>
+      </div>
+
+      <div class="border-t border-gray-200 dark:border-gray-800 pt-12">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">目录</h3>
+        <div class="text-left max-w-xl mx-auto space-y-6">
+          {parts.map(part => (
+            <div>
+              <h4 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase mb-2">{part.name}</h4>
+              <div class="space-y-1">
+                {part.chapters.map(num => {
+                  const ch = chapters.find(c => c.number === num)!
+                  return (
+                    <a href={`/claude-code-universe/ch${String(num).padStart(2, '0')}/`} class="block text-sm text-gray-600 dark:text-gray-400 hover:text-blue-500 py-1">
+                      <span class="text-gray-400 mr-2">{num}.</span>{ch.title}
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p class="mt-16 text-xs text-gray-400 dark:text-gray-600">
+        Built with Astro · Mermaid.js · Tailwind CSS
+      </p>
+    </div>
+  </div>
+</BaseLayout>

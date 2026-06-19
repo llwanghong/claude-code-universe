@@ -1,0 +1,47 @@
+---
+import { parts, chapters } from '../book.config'
+
+interface Props { currentChapter?: number }
+const { currentChapter } = Astro.props
+---
+
+<aside class="hidden lg:block w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 overflow-y-auto sticky top-0 h-screen">
+  <div class="p-6">
+    <a href="/claude-code-universe/" class="block mb-8">
+      <h2 class="text-lg font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+        Claude Code 学习宇宙
+      </h2>
+    </a>
+    <nav>
+      {parts.map(part => (
+        <div class="mb-6">
+          <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            {part.name}
+          </h3>
+          <ul class="space-y-1">
+            {part.chapters.map(num => {
+              const ch = chapters.find(c => c.number === num)!
+              const slug = `ch${String(num).padStart(2, '0')}`
+              const isCurrent = currentChapter === num
+              return (
+                <li>
+                  <a
+                    href={`/claude-code-universe/${slug}/`}
+                    class={`block py-1 px-2 rounded text-sm transition-colors ${
+                      isCurrent
+                        ? 'bg-blue-500/10 text-blue-500 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span class="text-gray-400 dark:text-gray-500 mr-1">{num}.</span>
+                    {ch.title.length > 28 ? ch.title.slice(0, 28) + '…' : ch.title}
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  </div>
+</aside>

@@ -4,9 +4,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'web-zh/**'
       - 'book-zh/**'
-      - 'deep-dive/**'
-      - 'supplements/**'
       - '.github/workflows/deploy-book.yml'
   workflow_dispatch:
 
@@ -25,62 +24,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install mdBook
-        run: |
-          curl -fsSL https://github.com/rust-lang/mdBook/releases/download/v0.4.44/mdbook-v0.4.44-x86_64-unknown-linux-gnu.tar.gz | tar xz
-          sudo mv mdbook /usr/local/bin/
-          mdbook --version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-      - name: Build book-zh with mdBook
+      - name: Install dependencies
         run: |
-          mkdir -p public
-          cd book-zh
-          mdbook build -d ../public/book-zh
+          cd web-zh
+          npm install
 
-      - name: Write landing page
+      - name: Build Astro site
         run: |
-          mkdir -p public
-          cat > public/index.html << 'ENDOFFILE'
-          <!DOCTYPE html>
-          <html lang="zh-CN">
-          <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Claude Code Universe</title>
-          <style>
-          *{margin:0;padding:0;box-sizing:border-box}
-          body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0d1117;color:#c9d1d9;display:flex;justify-content:center;align-items:center;min-height:100vh}
-          .container{max-width:800px;padding:48px 24px;text-align:center}
-          h1{font-size:2.5em;margin-bottom:16px;background:linear-gradient(135deg,#58a6ff,#bc8cff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-          .subtitle{color:#8b949e;font-size:1.1em;margin-bottom:48px}
-          .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;text-align:left}
-          .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;transition:border-color .2s;text-decoration:none;color:inherit;display:block}
-          .card:hover{border-color:#58a6ff}
-          .card h2{font-size:1.2em;margin-bottom:8px;color:#58a6ff}
-          .card p{color:#8b949e;font-size:.9em;line-height:1.5}
-          .footer{margin-top:48px;color:#484f58;font-size:.85em}
-          .footer a{color:#58a6ff}
-          </style>
-          </head>
-          <body>
-          <div class="container">
-          <h1>Claude Code Universe</h1>
-          <p class="subtitle">Three perspectives on one architecture</p>
-          <div class="cards">
-          <a href="book-zh/" class="card"><h2>📖 Chinese Translation</h2><p>18 chapters, native mdBook rendering with sidebar navigation and full-text search</p></a>
-          <a href="https://github.com/llwanghong/claude-code-universe/blob/main/deep-dive/README.md" class="card"><h2>🔬 Deep Dive</h2><p>8 articles from a frontend engineer's perspective</p></a>
-          <a href="https://github.com/llwanghong/claude-code-universe/blob/main/supplements/README.md" class="card"><h2>📝 Supplements</h2><p>7 supplementary articles on bootstrap, concurrency, MCP, and more</p></a>
-          </div>
-          <div class="footer"><a href="https://github.com/llwanghong/claude-code-universe">GitHub</a></div>
-          </div>
-          </body>
-          </html>
-          ENDOFFILE
+          cd web-zh
+          npx astro build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: public/
+          path: web-zh/dist/
 
   deploy:
     environment:
