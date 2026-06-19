@@ -10,12 +10,36 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await render(entry);
 const num = entry.id.match(/s(\d+)/)?.[1] || '';
+
+// Cross-reference: tutorial step → our deep-dive or supplement analysis
+const deepDiveMap: Record<string, { title: string; href: string; note: string }[]> = {
+  '01': [{ title: '01 · Agent 本质 + Agent Loop', href: '/claude-code-universe/deep-dive/01-agent-loop/', note: '核心循环的教学版 vs 生产版完整对照' }],
+  '02': [{ title: '02 · Tool System 深度解剖', href: '/claude-code-universe/deep-dive/02-tool-system/', note: '从 dispatch map 到 44 个工具的工业级引擎' }],
+  '03': [{ title: '03 · TodoWrite + Subagent', href: '/claude-code-universe/deep-dive/03-todowrite-subagent/', note: '模型自我规划 + 上下文隔离机制' }],
+  '04': [{ title: '03 · TodoWrite + Subagent', href: '/claude-code-universe/deep-dive/03-todowrite-subagent/', note: 'Subagent = 递归调用同一个 query()' }],
+  '05': [{ title: '04 · Skill Loading + Context Compaction', href: '/claude-code-universe/deep-dive/04-skills-compaction/', note: '按需加载知识 + 5层压缩流水线' }],
+  '06': [{ title: '04 · Skill Loading + Context Compaction', href: '/claude-code-universe/deep-dive/04-skills-compaction/', note: '三层压缩 → 生产版五层压缩流水线' }],
+  '07': [{ title: '05 · Persistent Tasks + Background', href: '/claude-code-universe/deep-dive/05-tasks-background/', note: '跨会话状态 + 异步执行模式' }],
+  '08': [{ title: '05 · Persistent Tasks + Background', href: '/claude-code-universe/deep-dive/05-tasks-background/', note: '8种Task类型 + BashOutput异步模型' }],
+  '09': [{ title: '06 · Agent Teams + Protocols', href: '/claude-code-universe/deep-dive/06-teams-protocols/', note: 'JSONL inbox → Swarm 多Backend协作' }],
+  '10': [{ title: '06 · Agent Teams + Protocols', href: '/claude-code-universe/deep-dive/06-teams-protocols/', note: 'request_id 关联 + shutdown/plan approval 协议' }],
+  '11': [{ title: '07 · Autonomous + Worktree', href: '/claude-code-universe/deep-dive/07-autonomous-worktree/', note: 'idle poll → Cron 定时唤醒 + 目录级隔离' }],
+  '12': [{ title: '07 · Autonomous + Worktree', href: '/claude-code-universe/deep-dive/07-autonomous-worktree/', note: 'git worktree + task 绑定 + 并行安全' }],
+};
+const related = deepDiveMap[num] || [];
 ---
 
 <BaseLayout title={`第 ${num} 步 — 动手实践`} description="">
   <main class="max-w-3xl mx-auto px-4 md:px-8 py-12">
     <a href="/claude-code-universe/tutorial/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-6 inline-block">← 动手实践</a>
-    <p class="text-sm text-[var(--color-terracotta)] font-mono mb-6">第 {num} 步 · 对应文件 s{num.padStart(2, '0')}_*.py</p>
+
+    <!-- Source file info -->
+    <div class="p-4 mb-8 rounded-lg border border-[var(--color-border)] dark:border-[#333] bg-[var(--color-beige)]/30 dark:bg-gray-900/50">
+      <p class="text-sm font-mono text-[var(--color-terracotta)] mb-1">📁 s{num.padStart(2, '0')}_*.py</p>
+      <p class="text-xs text-[var(--color-muted)]">来自 <a href="https://github.com/shareAI-lab/learn-claude-code" class="text-[var(--color-terracotta)] hover:underline">shareAI-lab/learn-claude-code</a> · 12 步渐进式 Agent Harness 教程</p>
+    </div>
+
+    <!-- Original doc content -->
     <article class="prose prose-gray dark:prose-invert max-w-none
       prose-table:border-collapse prose-table:w-full
       prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600 prose-th:bg-gray-100 dark:prose-th:bg-gray-800 prose-th:px-3 prose-th:py-2 prose-th:text-sm
@@ -32,5 +56,29 @@ const num = entry.id.match(/s(\d+)/)?.[1] || '';
       prose-li:my-1">
       <Content />
     </article>
+
+    <!-- Cross-reference: our deep analysis -->
+    {related.length > 0 && (
+      <div class="mt-12 pt-8 border-t border-[var(--color-border)] dark:border-[#333]">
+        <h2 class="text-lg font-bold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🔬 深入分析</h2>
+        <p class="text-sm text-[var(--color-muted)] mb-4">在我们的深度笔记中，对这部分内容做了完整的三层对照分析（教学版代码 → 生产版源码 → 前端启示）：</p>
+        <div class="space-y-3">
+          {related.map(r => (
+            <a href={r.href} class="block p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline">
+              <h3 class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] text-sm">{r.title}</h3>
+              <p class="text-xs text-[var(--color-muted)] mt-1">{r.note}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Source code note -->
+    <div class="mt-8 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333]">
+      <p class="text-sm text-[var(--color-muted)]">
+        💡 <strong>提示</strong>：完整可运行代码在 <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">upstream/learn-claude-code/agents/</code> 目录。
+        克隆仓库后可直接运行：<code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">python agents/s{num.padStart(2, '0')}_*.py</code>
+      </p>
+    </div>
   </main>
 </BaseLayout>

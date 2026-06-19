@@ -29,17 +29,38 @@ const titles: Record<string, string> = {
     <p class="text-base text-[var(--color-muted)] mb-10">12 步渐进式 Python 教程 — 从 120 行的 Agent Loop 到完整的自主 Agent 系统。每步都是可以跑的代码，每一步只增加一个概念。</p>
 
     <div class="space-y-2">
-      {steps.map((s, i) => (
-        <a href={`/claude-code-universe/tutorial/${s.id}/`} class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group">
-          <span class="text-sm font-mono text-[var(--color-terracotta)] mt-0.5 shrink-0 w-8 text-right">{i + 1}</span>
-          <div>
-            <span class="font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">
-              {titles[s.id] || s.id}
-            </span>
-            <span class="text-xs text-[var(--color-muted)] ml-2 font-mono">{s.id.replace('.md', '.py')}</span>
-          </div>
-        </a>
-      ))}
+      {steps.map((s, i) => {
+        const num = s.id.match(/s(\d+)/)?.[1] || '';
+        // Map tutorial steps to our deep-dive articles
+        const deepRefs: Record<string, string> = {
+          '01': 'Agent 本质 + Agent Loop（教学版 vs query.ts）',
+          '02': 'Tool System（dispatch map → 44工具工业引擎）',
+          '03': 'TodoWrite + Subagent（递归调用同一个 query()）',
+          '04': 'Subagent 上下文隔离（fresh context + filtered tools）',
+          '05': 'Skill Loading + Context Compaction（按需加载 + 5层压缩）',
+          '06': '三层压缩 → 五层压缩流水线',
+          '07': '持久化任务 + 异步执行（JSON文件 → 8种Task类型）',
+          '08': 'Background Tasks（线程池 → notification queue）',
+          '09': 'Agent Teams（JSONL inbox → Swarm 多Backend）',
+          '10': 'Team Protocols（request_id 关联 + shutdown FSM）',
+          '11': 'Autonomous Agents（idle poll → Cron 定时唤醒）',
+          '12': 'Worktree Isolation（git worktree + 并行安全）',
+        };
+        return (
+          <a href={`/claude-code-universe/tutorial/${s.id}/`} class="flex items-start gap-4 p-4 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group">
+            <span class="text-sm font-mono text-[var(--color-terracotta)] mt-0.5 shrink-0 w-8 text-right">{i + 1}</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">
+                  {titles[s.id] || s.id}
+                </span>
+                <span class="text-xs text-[var(--color-muted)] font-mono shrink-0">{s.id.replace('.md', '.py')}</span>
+              </div>
+              <p class="text-xs text-[var(--color-muted)] mt-1">{deepRefs[num] || ''}</p>
+            </div>
+          </a>
+        );
+      })}
     </div>
   </main>
 </BaseLayout>
