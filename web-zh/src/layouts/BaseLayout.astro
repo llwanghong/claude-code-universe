@@ -16,7 +16,7 @@ const { title, description } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦀</text></svg>" />
     <SEO title={title} description={description} />
 
     <!-- Prevent flash of wrong theme -->
@@ -31,6 +31,41 @@ const { title, description } = Astro.props;
     </script>
   </head>
   <body class="min-h-screen">
+    <!-- Top Navigation Bar -->
+    <nav class="sticky top-0 z-50 border-b border-[var(--color-border)] dark:border-[#333] bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
+      <div class="max-w-7xl mx-auto px-4 md:px-8 h-12 flex items-center gap-6 text-sm">
+        <a href={`${Astro.url?.origin ?? ''}/claude-code-universe/`} class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+          🦀 学习宇宙
+        </a>
+        <span class="text-[var(--color-muted)]">|</span>
+        <a href={`${Astro.url?.origin ?? ''}/claude-code-universe/ch01-architecture/`} class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+          📖 架构分析
+        </a>
+        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/deep-dive/README.md" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+          🔬 深度笔记
+        </a>
+        <a href="https://github.com/llwanghong/claude-code-universe/blob/main/supplements/README.md" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline">
+          📝 补充资料
+        </a>
+        <span class="flex-1"></span>
+        <button id="theme-toggle" class="text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors text-lg" aria-label="Toggle theme">
+          🌓
+        </button>
+      </div>
+    </nav>
+
+    <script is:inline>
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        // Re-render mermaid if needed
+        if (typeof mermaid !== 'undefined') {
+          mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default', securityLevel: 'loose' });
+          mermaid.run();
+        }
+      });
+    </script>
+
     <slot />
 
     <!-- Mermaid.js for diagram rendering -->
