@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+interface TitleMap { [key: string]: string }
+const titles: TitleMap = {
+  '01-core-vs-query': 'generateText vs query() — Agent Loop 对比',
+  '02-tool-system': 'tool() vs buildTool() — 工具系统对比',
+  '03-generative-ui': 'Generative UI — useChat + parts 渲染',
+  '04-provider-abstraction': 'Provider 抽象 — 多模型统一 API',
+  '05-agentic-control': 'stopWhen / prepareStep / maxSteps',
+  '06-complete-picture': '完整五层技术栈 — 能力全景',
+};
+
+const articles = await getCollection('aisdk');
+articles.sort((a, b) => a.id.localeCompare(b.id));
+---
+
+<BaseLayout title="AI SDK 分析" description="Vercel AI SDK 深度分析">
+  <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
+    <a href="/claude-code-universe/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 返回首页</a>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🎨 AI SDK 分析</h1>
+    <p class="text-lg text-[var(--color-muted)] mb-2">Vercel AI SDK 深度分析 — 五层架构的第五层</p>
+    <p class="text-sm text-[var(--color-muted)] mb-10">Generative UI · 客户端工具执行 · Provider 抽象 · Agentic Loop 控制 — 从 Agent 到产品的最后一公里</p>
+
+    <div class="space-y-4">
+      {articles.map(a => (
+        <a href={`/claude-code-universe/ai-sdk/${a.id}/`} class="block p-5 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline">
+          <h3 class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">{titles[a.id] || a.id}</h3>
+          <p class="text-sm text-[var(--color-muted)]">Claude Code vs Vercel AI SDK 对照分析 · 前端可操作启示</p>
+        </a>
+      ))}
+    </div>
+  </main>
+</BaseLayout>

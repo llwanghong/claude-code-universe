@@ -17,4 +17,8 @@ const tutorial = defineCollection({
   loader: glob({ pattern: 's*.md', base: '../upstream/learn-claude-code/docs/zh' }),
 });
 
-export const collections = { chapters, deepdive, supplements, tutorial };
+const aisdk = defineCollection({
+  loader: glob({ pattern: '0*.md', base: '../ai-sdk' }),
+});
+
+export const collections = { chapters, deepdive, supplements, tutorial, aisdk };

@@ -8,6 +8,7 @@ on:
       - 'book-zh/**'
       - 'deep-dive/**'
       - 'supplements/**'
+      - 'ai-sdk/**'
       - '.github/workflows/deploy-book.yml'
   workflow_dispatch:
 
