@@ -12,6 +12,8 @@ Fork agent 不从空历史开始，而是*继承父 agent 的完整对话*作为
 
 节省是巨大的：缓存前缀上的输入 token 约 90% 折扣。这使得为小任务生成 agent 在经济上可行——后台 memory 提取、代码审查通行、验证检查。
 
+> 💡 **译注**：为什么要关心"90% 折扣"？因为子 agent 每次启动都要把 system prompt、工具定义等重新发送给 API。如果父 agent 的对话已经有 10,000 token 的上下文，不 fork 的话子 agent 需要为这 10,000 token 支付全价。fork 之后，API 识别出"这部分跟父 agent 的前缀一模一样"，只对子 agent 自己新产生的 token 收费。算一笔账：父 agent 每轮对话后自动触发后台 memory 提取子 agent，每天发生数百次。如果没有 fork，每次花 $0.03；有 fork 后每次花 $0.003。一天省 $27，一个月省 $810。对于数十万用户的规模，这是年化百万美元级别的节省。
+
 ## 工作原理
 
 Fork 不是通过复制消息来工作的。它通过使子 agent 的初始上下文与父 agent 的逐字节相同来工作。子 agent 的 `query()` 调用以与父 agent 相同的前缀消息开始——相同的 system prompt，相同的对话历史（直到 fork 点），相同的工具定义，相同的 beta headers。

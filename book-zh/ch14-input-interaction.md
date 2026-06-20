@@ -28,6 +28,8 @@ Tokenizer 读取来自 stdin 的原始字节并识别完整的键序列。它在
 
 Tokenizer 根据前缀字节识别协议并分派到适当的子 tokenizer。结果是 `ParsedKey`——一个规范化的、独立于协议的键表示。
 
+> 💡 **译注**：为什么会有五种协议？因为终端模拟器（Terminal emulator）没有一个统一的"键盘事件标准"。浏览器有 `KeyboardEvent`，但终端只有字节流。你在终端按 `Ctrl+Up`，iTerm2 发送 `\x1b[1;5A`，Windows Terminal 可能发送完全不同的字节序列。Claude Code 必须在最底层处理这些差异——Tokenizer 的作用就是把"哪个终端发了什么字节"这个混乱的问题在边界处解决掉，让系统的其余部分只看到干净的 `ParsedKey`。
+
 ### ParsedKey
 
 ```typescript
