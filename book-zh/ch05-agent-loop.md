@@ -254,6 +254,6 @@ if (budgetTracker && checkTokenBudget(budgetTracker)) {
 
 **让调用者注入依赖。** `deps` 模式是一个简单的接缝，允许测试替换模型调用、压缩和 UUID 生成。没有它，agent loop 是不可测试的——没有办法在不进行真实 API 调用的情况下验证一个 1,700 行的 generator 函数的行为。
 
-**类型化你的终端状态。** 可辨识联合类型（discriminated union）确保每个停止原因都被显式处理。永远不要返回"大概是完成了"的字符串。调用者——REPL、SDK、子 agent——依赖精确的终端状态类型来做出关于下一步做什么的正确决策。
+**类型化你的终端状态。** discriminated union（可辨识联合类型）确保每个停止原因都被显式处理。永远不要返回"大概是完成了"的字符串。调用者——REPL、SDK、子 agent——依赖精确的终端状态类型来做出关于下一步做什么的正确决策。
 
 **错误恢复是分层的事情。** API 层在到达 agent loop 之前处理网络错误和 provider 回退。Agent loop 处理 max_output_tokens 恢复。Stop hooks 处理用户发起的停止。每层解决自己能解决的问题，并向上传播其余问题。

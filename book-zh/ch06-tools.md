@@ -105,7 +105,7 @@ const SleepTool = feature('PROACTIVE') || feature('KAIROS')
   : null
 ```
 
-来自 `bun:bundle` 的 `feature()` import 在打包时解析。当 `feature('AGENT_TRIGGERS')` 静态为 false 时，打包器消除整个 `require()` 调用——保持二进制文件小巧的死代码消除。
+来自 `bun:bundle` 的 `feature()` import 在打包时解析。当 `feature('AGENT_TRIGGERS')` 静态为 false 时，打包器消除整个 `require()` 调用——保持二进制文件小巧的dead code elimination（死代码消除）。
 
 ### assembleToolPool()：合并内置和 MCP 工具
 

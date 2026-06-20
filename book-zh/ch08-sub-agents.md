@@ -71,7 +71,7 @@ inputSchema = lazySchema(() => {
 - `{ status: 'completed', prompt, ...AgentToolResult }` — 同步完成，包含 agent 的最终输出
 - `{ status: 'async_launched', agentId, description, prompt, outputFile }` — 后台启动确认
 
-另外两个内部变体（`TeammateSpawnedOutput` 和 `RemoteLaunchedOutput`）存在但被排除在导出的 schema 之外，以便在外部构建中启用死代码消除。当相应的 feature flags 被禁用时，打包器会剥离这些变体及其关联的代码路径，保持分发的二进制文件更小。
+另外两个内部变体（`TeammateSpawnedOutput` 和 `RemoteLaunchedOutput`）存在但被排除在导出的 schema 之外，以便在外部构建中启用dead code elimination（死代码消除）。当相应的 feature flags 被禁用时，打包器会剥离这些变体及其关联的代码路径，保持分发的二进制文件更小。
 
 `async_launched` 变体值得注意的是它包含的内容：`outputFile` 路径，当 agent 完成时结果将写入该路径。这让父 agent（或任何其他消费者）可以轮询或监听文件以获取结果，提供一个在进程重启后仍然存活的基于文件系统的通信通道。
 

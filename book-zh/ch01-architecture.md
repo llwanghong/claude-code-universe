@@ -32,7 +32,7 @@ graph TD
 
 以下是每个抽象做什么以及为什么存在。
 
-**1. Query Loop**（`query.ts`，约 1,700 行）。一个 async generator，是整个系统的心跳。它流式接收模型响应，收集工具调用，执行它们，将结果追加到消息历史，然后循环。每一次交互——REPL、SDK、子 agent、headless `--print`——都流经这个单一函数。它产出 UI 消费的 `Message` 对象。它的返回类型是一个称为 `Terminal` 的可辨识联合类型（discriminated union），精确编码了循环停止的原因：正常完成、用户中止、token 预算耗尽、stop hook 干预、达到最大轮次或不可恢复错误。Generator 模式——而不是回调或事件发射器——提供了自然的背压（backpressure）、干净的取消和类型化的终端状态。第 5 章完整覆盖循环的内部机制。
+**1. Query Loop**（`query.ts`，约 1,700 行）。一个 async generator（异步生成器），是整个系统的心跳。它流式接收模型响应，收集工具调用，执行它们，将结果追加到消息历史，然后循环。每一次交互——REPL、SDK、子 agent、headless `--print`——都流经这个单一函数。它产出 UI 消费的 `Message` 对象。它的返回类型是一个称为 `Terminal` 的 discriminated union（可辨识联合类型），精确编码了循环停止的原因：正常完成、用户中止、token 预算耗尽、stop hook 干预、达到最大轮次或不可恢复错误。Generator 模式——而不是回调或事件发射器——提供了自然的 backpressure（背压，即消费者按自己的速度拉取数据）、干净的取消和类型化的终端状态。第 5 章完整覆盖循环的内部机制。
 
 **2. Tool System**（`Tool.ts`、`tools.ts`、`services/tools/`）。工具是 agent 可以在世界中做的任何事情：读文件、运行 shell 命令、编辑代码、搜索网络。那个简单的目的背后隐藏着大量的机制。每个工具实现了一个丰富的接口，涵盖身份、schema、执行、权限和渲染。工具不只是函数——它们携带自己的权限逻辑、并发声明、进度报告和 UI 渲染。系统将工具调用划分为并发和串行批次，并且流式执行器在模型完成响应之前就启动并发安全的工具。第 6 章覆盖完整的工具接口和执行流水线。
 
@@ -79,9 +79,9 @@ sequenceDiagram
 
 第一，查询循环是一个 generator，不是回调链。REPL 通过 `for await` 从中拉取消息，这意味着背压是自然的——如果 UI 跟不上，generator 暂停。这是相对于事件发射器或可观察流的有意选择。
 
-第二，工具执行与模型流式输出重叠。`StreamingToolExecutor` 不会等模型完成才开始执行并发安全的工具。一个 `Read` 调用可以在模型还在生成剩余响应时就完成并返回结果。这是推测执行（speculative execution）——如果模型的最终输出使工具调用无效（罕见但可能），结果会被丢弃。
+第二，工具执行与模型流式输出重叠。`StreamingToolExecutor` 不会等模型完成才开始执行并发安全的工具。一个 `Read` 调用可以在模型还在生成剩余响应时就完成并返回结果。这是 speculative execution（推测执行）——如果模型的最终输出使工具调用无效（罕见但可能），结果会被丢弃。
 
-第三，整个循环是可重入（re-entrant）的。当模型进行工具调用时，结果被追加到消息历史中，循环再次调用模型，使用更新后的上下文。没有单独的"工具结果处理"阶段——全在一个循环里。模型通过简单地不再进行任何工具调用来决定何时完成。
+第三，整个循环是 re-entrant（可重入）的。当模型进行工具调用时，结果被追加到消息历史中，循环再次调用模型，使用更新后的上下文。没有单独的"工具结果处理"阶段——全在一个循环里。模型通过简单地不再进行任何工具调用来决定何时完成。也就是说，同一个 `query()` 函数被反复调用，每次传入更新后的消息历史，直到模型不再返回 tool_use。
 
 ---
 
@@ -161,7 +161,7 @@ const reactiveCompact = feature('REACTIVE_COMPACT')
   : null
 ```
 
-`feature()` 函数来自 `bun:bundle`，即 Bun 的内置打包器 API。在构建时，每个 feature flag 解析为一个布尔字面量。然后打包器的死代码消除在 flag 为 false 时完全去除 `require()` 调用——该模块从不加载，从不包含在 bundle 中，也不发布。
+`feature()` 函数来自 `bun:bundle`，即 Bun 的内置打包器 API。在构建时，每个 feature flag 解析为一个布尔字面量。然后打包器的dead code elimination（死代码消除）在 flag 为 false 时完全去除 `require()` 调用——该模块从不加载，从不包含在 bundle 中，也不发布。
 
 模式是一致的：顶层 `feature()` 守卫包裹一个 `require()` 调用。使用 `require()` 而不是 `import` 是因为动态 `require()` 可以在守卫为 false 时被打包器完全消除，而动态 `import()` 不能（它返回一个 Promise，打包器必须保留）。
 

@@ -222,7 +222,7 @@ gantt
 
 简要提及在 init 期间运行的一个子系统：schema migration。Claude Code 将配置和会话数据存储在本地文件和目录中。当格式在版本之间变化时，migration 在启动时自动运行。
 
-每个 migration 是一个带有版本号的函数。系统检查当前 schema 版本与最高 migration 版本，按顺序运行待处理的 migration，并更新版本号。Migration 是幂等的且快速的（操作小型本地文件而非数据库）。整个 migration 过程通常在 5ms 以内完成。如果 migration 失败，它记录错误并继续——对于本地配置，可用性胜过严格一致性。
+每个 migration 是一个带有版本号的函数。系统检查当前 schema 版本与最高 migration 版本，按顺序运行待处理的 migration，并更新版本号。Migration 是idempotent（幂等的）且快速的（操作小型本地文件而非数据库）。整个 migration 过程通常在 5ms 以内完成。如果 migration 失败，它记录错误并继续——对于本地配置，可用性胜过严格一致性。
 
 > 💡 **译注**：这里的 Migration 指的是数据迁移（schema migration），不是进程迁移。Claude Code 把用户配置和会话数据存在 `~/.claude/` 等本地目录的 JSON/YAML 文件中。当版本升级导致数据格式变化时（比如 v2.0 把配置文件从扁平结构改成嵌套结构），启动时自动把旧格式转成新格式。这跟数据库的 schema migration 概念一样，只是操作对象是本地文件。每个 migration 有一个版本号，按版本号顺序执行，且设计为幂等（重复执行不会出错）——比如迁移前先检查"是不是已经做过了"。500 万次启动里偶尔失败一两次没关系，只要不阻塞用户使用。
 
