@@ -20,8 +20,8 @@ articles.sort((a, b) => a.id.localeCompare(b.id));
   <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
     <a href="/claude-code-universe/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 返回首页</a>
     <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">🎨 AI SDK 分析</h1>
-    <p class="text-lg text-[var(--color-muted)] mb-2">Vercel AI SDK 深度分析 — 五层架构的第五层</p>
-    <p class="text-sm text-[var(--color-muted)] mb-10">Generative UI · 客户端工具执行 · Provider 抽象 · Agentic Loop 控制 — 从 Agent 到产品的最后一公里</p>
+    <p class="text-lg text-[var(--color-muted)] mb-2">Vercel AI SDK 深度分析 — Generative UI 层</p>
+    <p class="text-sm text-[var(--color-muted)] mb-10">Agent Loop → Tool System → Context → Orchestration → <strong>Generative UI</strong> — 从 Agent 基础设施到用户产品的最后一公里</p>
 
     <div class="space-y-4">
       {articles.map(a => (
