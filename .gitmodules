@@ -4,3 +4,6 @@
 [submodule "upstream/claude-code-from-source"]
 	path = upstream/claude-code-from-source
 	url = https://github.com/alejandrobalderas/claude-code-from-source.git
+[submodule "upstream/ai-sdk"]
+	path = upstream/ai-sdk
+	url = https://github.com/vercel/ai.git
