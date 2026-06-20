@@ -56,6 +56,20 @@
 
 ---
 
+## 场景六：Vercel AI SDK 更新了
+
+**你需要做的**：告诉我
+
+> "AI SDK 更新了，同步分析"
+
+**我会自动做的**：
+1. `git submodule update --remote upstream/ai-sdk`
+2. 检查核心包（ai、react、anthropic、openai）的变更
+3. 更新 `ai-sdk/` 中受影响的分析文档
+4. 如果 API 有重大变化 → 更新代码示例
+
+---
+
 ## 场景四：新发现了一个相关仓库想整合进来
 
 **你需要做的**：告诉我

@@ -1,6 +1,6 @@
 # Claude Code 学习宇宙
 
-**三个视角，一个架构 —— AI 编程 Agent 的完整学习体系。**
+**四个视角，一个架构 —— AI 编程 Agent 的完整学习体系。**
 
 [English](./README.md) | [交叉索引](./CROSS_REFERENCE.md)
 
@@ -17,6 +17,7 @@
 | **[深度笔记](./deep-dive/)** | 原创 | 8 篇文章 + 学习路线 | 前端工程师视角：源码对照 + 前端启示 |
 | **[补充资料](./supplements/)** | 原创 | 7 篇文章 | 深度笔记未覆盖的主题：启动、并发、MCP 等 |
 | **[中文翻译](./book-zh/)** | 原创 | 18 章 | Claude Code from Source 的完整中文翻译 |
+| **[AI SDK 分析](./ai-sdk/)** | 原创 | 6 篇文章 | Vercel AI SDK 深度分析 — Generative UI · 客户端工具 · Provider 抽象 |
 
 ## 快速开始
 
