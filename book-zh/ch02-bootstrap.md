@@ -34,7 +34,7 @@ flowchart TD
 2. **Setup 中的 Promise 并行。** Socket 绑定、hook 快照、命令加载和 agent 定义加载全部并发运行。
 3. **渲染后延迟预取。** 用户在输入第一条消息之前不需要的一切——git status、模型能力、AWS 凭证——在提示可见后运行。
 
-第四种策略不那么可见但同样重要：**动态 import 推迟模块加载**。代码库至少在十几个地方使用 `await import('./module.js')` 来避免在需要之前加载代码。OpenTelemetry（400KB + 700KB gRPC）仅在遥测初始化时加载。React 组件仅在渲染时加载。每个动态 import 用冷路径延迟（首次使用触发模块加载）换取热路径速度（启动不为可能永远不使用的模块付费）。
+第四种策略不那么可见但同样重要：**动态 import 推迟模块加载**。代码库至少在十几个地方使用 `await import('./module.js')` 来避免在需要之前加载代码。OpenTelemetry（400KB + 700KB gRPC）仅在遥测初始化时加载。React 组件仅在渲染时加载。每个动态 import 用冷路径延迟（首次使用时才触发 module evaluation）换取热路径速度（启动时不为可能永远不使用的模块付费）。
 
 ---
 
@@ -71,7 +71,7 @@ const mdmPromise = startMDMSubprocess()
 const keychainPromise = readKeychainCredentials()
 ```
 
-当 JavaScript 引擎评估 `main.tsx` 的其余部分及其传递 import（约 138ms 的模块加载）时，这两个 promise 已经在飞行中了。MDM（Mobile Device Management）子进程检查组织安全策略。Keychain 读取获取存储的凭证。两者都是 I/O-bound 操作，否则会在关键路径上串行执行。
+当 JavaScript 引擎在执行 `main.tsx` 的其余部分及其传递 import 时（约 138ms 的 module evaluation，即 JS 引擎加载、解析并执行模块代码的过程），这两个 promise 已经在飞行中了。MDM（Mobile Device Management）子进程检查组织安全策略。Keychain 读取获取存储的凭证。两者都是 I/O-bound 操作，否则会在关键路径上串行执行。
 
 洞察：模块加载不是空闲时间——它是你可以与 I/O 重叠的时间。当 `main.tsx` 的导出函数第一次被调用时，这些 promise 通常已经解析完毕。
 
