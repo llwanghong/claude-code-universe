@@ -161,11 +161,11 @@ const reactiveCompact = feature('REACTIVE_COMPACT')
   : null
 ```
 
-`feature()` 函数来自 `bun:bundle`，即 Bun 的内置打包器 API。在构建时，每个 feature flag 解析为一个布尔字面量。然后打包器的dead code elimination（死代码消除）在 flag 为 false 时完全去除 `require()` 调用——该模块从不加载，从不包含在 bundle 中，也不发布。
+`feature()` 函数来自 `bun:bundle`，即 Bun 的内置打包器 API。在构建时，每个 feature flag 被解析为布尔字面量（`true` 或 `false`）。打包器的 dead code elimination（死代码消除）在 flag 为 `false` 时完全去除整个 `require()` 调用——该模块从不加载、从不包含在 bundle 中、也从不发布。
 
-模式是一致的：顶层 `feature()` 守卫包裹一个 `require()` 调用。使用 `require()` 而不是 `import` 是因为动态 `require()` 可以在守卫为 false 时被打包器完全消除，而动态 `import()` 不能（它返回一个 Promise，打包器必须保留）。
+模式是一致的：顶层 `feature()` 守卫包裹一个 `require()` 调用。之所以用 `require()` 而不是 `import()`，是因为动态 `require()` 返回一个模块对象，Bun 打包器能静态分析出 flag 为 `false` 时这段代码永远不可达，从而安全地彻底删除它。而动态 `import()` 返回 Promise，打包器无法安全消除——因为 Promise 可能在运行时被 `.then()` 链式调用。
 
-有一个值得注意的讽刺。早期 npm 发布中发布的 source maps 包含了 `sourcesContent`——完整的原始 TypeScript 源码，包括仅内部使用的代码路径。Feature flags 成功地在运行时去除了代码，但在 source maps 中留下了源码。这就是 Claude Code 源码变得可以公开阅读的原因。
+> 💡 **译注：这就是本书的"元故事"。** Anthropic 用同一份代码库同时维护内部版和公开 npm 版，靠编译时 feature flag 剥离内部代码。但早期发布 npm 包时，source map 里包含了 `sourcesContent` 字段——完整的未压缩 TypeScript 源码。feature flags 在运行时确实生效了（内部代码不会执行），但源码本身却随 source map 一起公开了。这就是本书（以及我们整个学习宇宙）得以存在的技术原因——近两千个生产级 Agent 源文件，可以公开阅读了。
 
 ---
 

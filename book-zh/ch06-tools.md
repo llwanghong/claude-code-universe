@@ -51,7 +51,9 @@ function buildTool(definition) {
 }
 ```
 
-默认值在安全关键的地方有意 fail-closed。忘记实现 `isConcurrencySafe` 的新工具默认为 `false` — 它串行运行，绝不并行。忘记 `isReadOnly` 的工具默认为 `false` — 系统将其视为写操作。忘记 `toAutoClassifierInput` 的工具返回空字符串 — 自动模式安全分类器跳过它，这意味着通用权限系统处理它，而不是自动化绕过。
+默认值在安全关键的地方有意 fail-closed（故障关闭，即"不确定时宁可保守"）。忘记实现 `isConcurrencySafe` 的新工具默认为 `false` — 它串行运行，绝不并行。忘记 `isReadOnly` 的工具默认为 `false` — 系统将其视为写操作。忘记 `toAutoClassifierInput` 的工具返回空字符串 — 自动模式安全分类器跳过它，这意味着通用权限系统处理它，而不是自动化绕过。
+
+> 💡 **译注**：fail-closed（故障关闭）是安全工程的核心原则，与之对应的是 fail-open（故障开放）。举个例子：你家小区的门禁系统，断电时如果门自动锁死，这是 fail-closed（宁可把你关外面也不让陌生人进来）；如果断电时门自动打开，这是 fail-open（消防需求，宁可让陌生人进来也不能把你困在里面烧死）。在 Agent 工具系统中，默认值是"这个新工具不能并行（可能不安全）、可能是写操作（可能破坏数据）、不信任自动审批"。新工具的作者必须显式声明"我的工具是安全的"才能解锁相应权限。这种设计防止了"忘记配置安全策略"导致的漏洞。
 
 一个*不是* fail-closed 的默认值是 `checkPermissions`，它返回 `allow`。这看起来是反向的，直到你理解了分层权限模型：`checkPermissions` 是在通用权限系统已经评估了规则、hooks 和基于模式的策略*之后*运行的工具特定逻辑。工具从 `checkPermissions` 返回 `allow` 是在说"我没有工具特定的反对意见"——它不是授予一揽子访问权限。
 

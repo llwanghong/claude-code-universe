@@ -34,27 +34,30 @@ const { title, description } = Astro.props;
     <!-- Top Navigation Bar -->
     <nav class="sticky top-0 z-50 border-b border-[var(--color-border)] dark:border-[#333] bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-4 md:px-8 h-12 flex items-center text-sm">
-        <a href="/claude-code-universe/" class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] hover:text-[var(--color-terracotta)] transition-colors no-underline mr-6">
+        <a href="/claude-code-universe/" class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] hover:text-[var(--color-terracotta)] transition-colors no-underline mr-5">
           🦀 首页
         </a>
-        <a href="/claude-code-universe/ch01-architecture/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mr-4 font-medium">
+        <span class="w-px h-5 bg-[var(--color-border)] dark:bg-gray-700 mx-1"></span>
+        <a href="/claude-code-universe/ch01-architecture/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mx-3 font-medium">
           📖 架构分析
         </a>
-        <a href="/claude-code-universe/tutorial/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mr-6 font-medium">
+        <span class="w-px h-5 bg-[var(--color-border)] dark:bg-gray-700 mx-1"></span>
+        <a href="/claude-code-universe/tutorial/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mx-3 font-medium">
           🛠️ 动手实践
         </a>
-        <span class="text-[var(--color-muted)] text-xs mr-3">研究:</span>
-        <a href="/claude-code-universe/deep-dive/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mr-3 text-xs">
+        <span class="w-px h-5 bg-[var(--color-border)] dark:bg-gray-700 mx-1"></span>
+        <span class="text-[var(--color-muted)] text-xs tracking-wider uppercase mx-2">研究</span>
+        <a href="/claude-code-universe/deep-dive/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mx-2 text-xs">
           笔记
         </a>
-        <a href="/claude-code-universe/supplements/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mr-3 text-xs">
+        <a href="/claude-code-universe/supplements/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mx-2 text-xs">
           补充
         </a>
-        <a href="/claude-code-universe/ai-sdk/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline text-xs">
+        <a href="/claude-code-universe/ai-sdk/" class="text-[var(--color-secondary)] dark:text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors no-underline mx-2 text-xs">
           AI SDK
         </a>
         <span class="flex-1"></span>
-        <button id="theme-toggle" class="text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors text-lg" aria-label="Toggle theme">
+        <button id="theme-toggle" class="text-[var(--color-muted)] hover:text-[var(--color-terracotta)] transition-colors text-lg ml-3" aria-label="Toggle theme">
           🌓
         </button>
       </div>
