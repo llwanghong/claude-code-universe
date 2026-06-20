@@ -1,12 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const sections = [
+const mainTracks = [
   {
     icon: '📖', title: '架构分析',
     desc: 'Claude Code 生产级架构的完整解析。18 章，6 大抽象，从 Agent Loop 到 Swarm 协作。',
     href: '/claude-code-universe/ch01-architecture/',
-    stat: '18 章 · 7 部分',
+    stat: '18 章 · 完整中文翻译',
   },
   {
     icon: '🛠️', title: '动手实践',
@@ -14,28 +14,31 @@ const sections = [
     href: '/claude-code-universe/tutorial/',
     stat: '12 步 · 可运行代码',
   },
+];
+
+const researchTracks = [
   {
     icon: '🔬', title: '深度笔记',
-    desc: '前端 Harness 工程师视角。教学版 vs 生产版逐层对照，每个模块附前端可操作启示。',
+    desc: '教学版 vs 生产版逐层对照。每个模块附源码分析 + 前端可操作启示。',
     href: '/claude-code-universe/deep-dive/',
-    stat: '8 篇 · 三层对照',
+    stat: '8 篇',
   },
   {
     icon: '📝', title: '补充资料',
-    desc: '深度笔记未覆盖的主题：Bootstrap 流水线、并发执行、MCP 传输、终端 UI、性能工程。',
+    desc: 'Bootstrap 流水线、并发执行、MCP 传输、终端 UI、性能工程 — 补全知识盲区。',
     href: '/claude-code-universe/supplements/',
-    stat: '7 篇 · 源码对照',
+    stat: '7 篇',
   },
   {
     icon: '🎨', title: 'AI SDK 分析',
-    desc: 'Vercel AI SDK 深度分析。Generative UI、客户端工具执行、Provider 抽象 — 从 Agent 到产品的最后一公里。',
+    desc: 'Vercel AI SDK 深度分析。Generative UI、客户端工具、Provider 抽象 — 从 Agent 到产品的最后一公里。',
     href: '/claude-code-universe/ai-sdk/',
-    stat: '6 篇 · 五层完整',
+    stat: '6 篇',
   },
 ];
 ---
 
-<BaseLayout title="Claude Code 学习宇宙" description="三份资源，一个知识体系">
+<BaseLayout title="Claude Code 学习宇宙" description="四份资源，一个知识体系">
   <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
 
     <!-- Hero -->
@@ -44,13 +47,13 @@ const sections = [
         Claude Code<br class="md:hidden" /> 学习宇宙
       </h1>
       <p class="text-lg text-[var(--color-secondary)] dark:text-[var(--color-muted)] max-w-2xl mx-auto leading-relaxed">
-        整合三份独立资源为一个结构化知识体系，帮你从前端工程师成长为能独立设计 Agent 系统的 Harness 工程师。
+        整合四份独立资源为一个结构化知识体系，帮你从前端工程师成长为能独立设计 Agent 系统的 Harness 工程师。
       </p>
     </div>
 
-    <!-- Four tracks -->
-    <div class="grid md:grid-cols-2 gap-4 mb-16">
-      {sections.map(s => (
+    <!-- Two main tracks -->
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+      {mainTracks.map(s => (
         <a href={s.href} class="block p-6 rounded-xl border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group">
           <div class="flex items-center gap-3 mb-3">
             <span class="text-2xl">{s.icon}</span>
@@ -62,35 +65,50 @@ const sections = [
       ))}
     </div>
 
+    <!-- Research section -->
+    <div class="mb-16 p-6 rounded-xl border border-[var(--color-border)] dark:border-[#333]">
+      <h2 class="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-4">🔬 深度研究</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        {researchTracks.map(s => (
+          <a href={s.href} class="block p-4 rounded-lg hover:bg-[var(--color-beige)]/30 dark:hover:bg-gray-900/50 transition-colors no-underline group">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-lg">{s.icon}</span>
+              <h3 class="text-sm font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">{s.title}</h3>
+            </div>
+            <p class="text-xs text-[var(--color-secondary)] dark:text-[var(--color-muted)] leading-relaxed mb-2">{s.desc}</p>
+            <span class="text-xs font-medium text-[var(--color-terracotta)]">{s.stat}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+
     <!-- Knowledge Map -->
     <div class="mb-16 p-8 rounded-xl border border-[var(--color-border)] dark:border-[#333] bg-[var(--color-beige)]/30 dark:bg-transparent">
-      <h2 class="text-xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6 text-center">知识体系</h2>
-      <div class="space-y-4 text-sm leading-relaxed">
-        <div class="flex flex-col md:flex-row gap-4 justify-center text-center">
-          <div class="flex-1 p-4 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
-            <p class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">📖 架构分析</p>
-            <p class="text-[var(--color-muted)] text-xs">理解 "是什么"<br/>生产级架构全貌</p>
-          </div>
-          <div class="text-[var(--color-muted)] self-center text-2xl hidden md:block">→</div>
-          <div class="flex-1 p-4 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
-            <p class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">🛠️ 动手实践</p>
-            <p class="text-[var(--color-muted)] text-xs">理解 "怎么做"<br/>12 步渐进实现</p>
-          </div>
-          <div class="text-[var(--color-muted)] self-center text-2xl hidden md:block">→</div>
-          <div class="flex-1 p-4 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
-            <p class="font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-1">🔬 深度笔记</p>
-            <p class="text-[var(--color-muted)] text-xs">理解 "为什么"<br/>教学 vs 生产对照</p>
-          </div>
+      <h2 class="text-lg font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6 text-center">知识体系</h2>
+      <div class="flex flex-col md:flex-row gap-3 justify-center text-center text-sm">
+        <div class="flex-1 p-3 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
+          <p class="font-semibold mb-1">📖 架构分析</p>
+          <p class="text-xs text-[var(--color-muted)]">理解"是什么"</p>
         </div>
-        <p class="text-center text-xs text-[var(--color-muted)] pt-2">
-          📝 补充资料贯穿其中，填补主题空白（Bootstrap / 并发 / MCP / 终端 / 性能）
-        </p>
+        <span class="text-[var(--color-muted)] self-center hidden md:block">→</span>
+        <div class="flex-1 p-3 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
+          <p class="font-semibold mb-1">🛠️ 动手实践</p>
+          <p class="text-xs text-[var(--color-muted)]">学会"怎么做"</p>
+        </div>
+        <span class="text-[var(--color-muted)] self-center hidden md:block">→</span>
+        <div class="flex-1 p-3 rounded-lg bg-white dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
+          <p class="font-semibold mb-1">🔬 深度研究</p>
+          <p class="text-xs text-[var(--color-muted)]">理解"为什么"</p>
+        </div>
       </div>
+      <p class="text-center text-xs text-[var(--color-muted)] mt-4">
+        笔记（源码对照）· 补充（主题覆盖）· AI SDK（Generative UI）
+      </p>
     </div>
 
     <!-- Footer -->
     <footer class="text-center text-sm text-[var(--color-muted)] pt-8 border-t border-[var(--color-border)] dark:border-[#333]">
-      <p>架构分析 · 动手实践 · 深度笔记 · 补充资料</p>
+      <p>架构分析 · 动手实践 · 深度笔记 · 补充资料 · AI SDK 分析</p>
       <p class="mt-1"><a href="https://github.com/llwanghong/claude-code-universe" class="text-[var(--color-terracotta)] hover:underline">GitHub 仓库</a> · 持续更新</p>
     </footer>
   </main>
