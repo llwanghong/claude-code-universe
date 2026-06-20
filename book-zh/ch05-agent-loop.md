@@ -16,26 +16,26 @@
 
 ## 为什么是 Async Generator
 
-第一个架构问题：为什么 agent loop 是 generator 而不是基于回调的事件发射器？
+第一个架构问题：为什么 agent loop 是 generator 而不是基于回调的事件发射器？真实的源码（`query.ts:219`）：
 
 ```typescript
-// Simplified — shows the concept, not the exact types
-async function* agentLoop(params: LoopParams): AsyncGenerator<Message | Event, TerminalReason>
+export async function* query(
+  params: QueryParams,
+): AsyncGenerator<
+  StreamEvent | RequestStartEvent | Message | TombstoneMessage | ToolUseSummaryMessage,
+  Terminal
+>
 ```
 
-实际签名产出几种消息和事件类型，并返回一个编码了循环为何停止的可辨识联合类型。
+Generator 产出四种消息类型加上事件，返回 `Terminal`——一个 discriminated union，精确编码循环为何停止。
 
-三个原因，按重要性排序。
+**背压（Backpressure）。** 事件发射器不管消费者是否准备好就触发。Generator 只在消费者调用 `.next()` 时才产出。REPL React 渲染器忙时 generator 自然暂停。没有缓冲区溢出。
 
-**背压（Backpressure）。** 事件发射器不管消费者是否准备好就触发。Generator 只在消费者调用 `.next()` 时才产出。当 REPL 的 React 渲染器正在忙于绘制前一帧时，generator 自然暂停。当 SDK 消费者正在处理工具结果时，generator 等待。没有缓冲区溢出，没有丢失消息，没有"快速生产者/慢速消费者"问题。
+**返回值语义。** 返回类型是 `Terminal`——编码了 10 种不同的停止原因。调用者不需要订阅"结束"事件并祈祷 payload 包含原因。
 
-**返回值语义。** Generator 的返回类型是 `Terminal`——一个可辨识联合类型，精确编码了循环为何停止。是正常完成？用户中止？token 预算耗尽？stop hook 干预？达到最大轮次？不可恢复的模型错误？有 10 种不同的终端状态。调用者不需要订阅"结束"事件然后祈祷 payload 包含原因。它们将其作为 `for await...of` 或 `yield*` 的类型化返回值获得。
+**通过 `yield*` 的可组合性。** 外部 `query()` 函数委托给 `queryLoop()`，透明转发每个产出值和最终返回。子 generator 使用相同模式。
 
-**通过 `yield*` 的可组合性。** 外部 `query()` 函数通过 `yield*` 委托给 `queryLoop()`，它透明地转发每个产出的值和最终的返回。像 `handleStopHooks()` 这样的子 generator 使用相同的模式。这创建了一个干净的职责链，没有回调、没有 promises 包裹 promises、没有事件转发样板代码。
-
-这个选择有一个代价——JavaScript 中的 async generator 不能被"倒回"或 fork。但 agent loop 两者都不需要。它是一个严格向前移动的状态机。
-
-还有一个微妙之处：`function*` 语法使函数*惰性*。函数体在第一次 `.next()` 调用之前不执行。这意味着 `query()` 立即返回——所有重量级初始化（配置快照、memory 预取、budget tracker）只在消费者开始拉取值时才发生。在 REPL 中，这意味着 React 渲染管道在循环的第一行运行之前已经设置好了。
+`function*` 语法还使函数*惰性*——函数体在第一次 `.next()` 调用前不执行。重量级初始化（配置快照、memory 预取）只在消费者开始拉取值时才发生。REPL 中 React 渲染管道在循环第一行运行前就已就绪。
 
 ---
 
@@ -184,17 +184,20 @@ for await (const message of deps.callModel({
 
 ## 工具执行
 
-如果 `needsFollowUp` 为 true——即模型发出了工具调用——循环执行它们：
+如果 `needsFollowUp` 为 true（`query.ts:834`），模型发出了工具调用——循环执行它们，将结果追加到消息历史，然后 `continue` 回到 `while(true)` 顶部。如果 `needsFollowUp` 为 false（`query.ts:1062`），没有更多工具调用要处理——循环退出并返回 `Terminal`。
 
 ```typescript
-if (needsFollowUp) {
-  const results = await runTools(toolUseBlocks, toolUseContext, canUseTool)
-  for (const result of results) {
-    yield result  // Tool result messages
-  }
-  messagesForQuery.push(...results)
-  state = { ...state, messages: messagesForQuery, turnCount: turnCount + 1 }
-  continue  // Back to top of while(true)
+// query.ts:834 — 检测工具调用，设置循环继续标志
+if (block.type === 'tool_use') {
+  toolUseBlocks.push(block)
+  needsFollowUp = true
+}
+
+// query.ts:1062 — 循环退出条件
+if (!needsFollowUp) {
+  // 检查 pending 的 tool use summary
+  // 检查错误恢复
+  return terminal  // ← 返回 Terminal，循环结束
 }
 ```
 
