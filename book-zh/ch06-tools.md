@@ -34,26 +34,41 @@ Tool<Input extends AnyObject, Output, P extends ToolProgressData>
 
 ### buildTool() 和 Fail-Closed 默认值
 
-没有工具定义直接构造 `Tool` 对象。每个工具都通过 `buildTool()`，一个在工具特定定义下展开默认对象的工厂：
+没有工具定义直接构造 `Tool` 对象。每个工具都通过 `buildTool()`（`Tool.ts:783`）。这是真实源码：
 
 ```typescript
-// Pseudocode — illustrates the fail-closed defaults pattern
-const SAFE_DEFAULTS = {
-  isEnabled:         () => true,
-  isParallelSafe:    () => false,   // Fail-closed: new tools run serially
-  isReadOnly:        () => false,   // Fail-closed: treated as writes
-  isDestructive:     () => false,
-  checkPermissions:  (input) => ({ behavior: 'allow', updatedInput: input }),
+/**
+ * Defaults (fail-closed where it matters):
+ * - isEnabled → true
+ * - isConcurrencySafe → false  (assume not safe)
+ * - isReadOnly → false         (assume writes)
+ * - isDestructive → false
+ * - checkPermissions → { behavior: 'allow', updatedInput }
+ *   (defer to general permission system)
+ * - toAutoClassifierInput → '' (skip classifier —
+ *   security-relevant tools must override)
+ */
+const TOOL_DEFAULTS = {
+  isEnabled: () => true,
+  isConcurrencySafe: (_input?: unknown) => false,
+  isReadOnly: (_input?: unknown) => false,
+  isDestructive: (_input?: unknown) => false,
+  checkPermissions: (input, _ctx?) =>
+    Promise.resolve({ behavior: 'allow', updatedInput: input }),
+  toAutoClassifierInput: (_input?: unknown) => '',
+  userFacingName: (_input?: unknown) => '',
 }
 
-function buildTool(definition) {
-  return { ...SAFE_DEFAULTS, ...definition }  // Definition overrides defaults
+export function buildTool<D extends AnyToolDef>(def: D): BuiltTool<D> {
+  return { ...TOOL_DEFAULTS, userFacingName: () => def.name, ...def }
 }
 ```
 
-默认值在安全关键的地方有意 fail-closed（故障关闭，即"不确定时宁可保守"）。忘记实现 `isConcurrencySafe` 的新工具默认为 `false` — 它串行运行，绝不并行。忘记 `isReadOnly` 的工具默认为 `false` — 系统将其视为写操作。忘记 `toAutoClassifierInput` 的工具返回空字符串 — 自动模式安全分类器跳过它，这意味着通用权限系统处理它，而不是自动化绕过。
+七个默认值，五个 fail-closed。忘记实现 `isConcurrencySafe` 的新工具默认为 `false`——串行，绝不并行。忘记 `isReadOnly` 默认为 `false`——被视为写操作。`toAutoClassifierInput` 返回空字符串——自动模式安全分类器跳过此工具。
 
-> 💡 **译注**：fail-closed（故障关闭）是安全工程的核心原则，与之对应的是 fail-open（故障开放）。举个例子：你家小区的门禁系统，断电时如果门自动锁死，这是 fail-closed（宁可把你关外面也不让陌生人进来）；如果断电时门自动打开，这是 fail-open（消防需求，宁可让陌生人进来也不能把你困在里面烧死）。在 Agent 工具系统中，默认值是"这个新工具不能并行（可能不安全）、可能是写操作（可能破坏数据）、不信任自动审批"。新工具的作者必须显式声明"我的工具是安全的"才能解锁相应权限。这种设计防止了"忘记配置安全策略"导致的漏洞。
+一个*不是* fail-closed 的默认值是 `checkPermissions`，返回 `allow`。这是因为它运行在通用权限系统（规则、hooks、模式策略）**之后**——返回 `allow` 是说"我没有工具特定的反对意见"，不是授予一揽子访问权限。
+
+> 💡 **译注**：fail-closed（故障关闭）是安全工程核心原则。门禁断电锁死 = fail-closed。消防通道断电打开 = fail-open。新工具默认"不能并行、可能是写操作、不信任自动审批"——作者必须显式声明"安全"才能解锁。
 
 一个*不是* fail-closed 的默认值是 `checkPermissions`，它返回 `allow`。这看起来是反向的，直到你理解了分层权限模型：`checkPermissions` 是在通用权限系统已经评估了规则、hooks 和基于模式的策略*之后*运行的工具特定逻辑。工具从 `checkPermissions` 返回 `allow` 是在说"我没有工具特定的反对意见"——它不是授予一揽子访问权限。
 
