@@ -56,15 +56,23 @@ graph LR
     SDK --> CL["callModel()"]
 ```
 
-分发完全由环境变量驱动，按固定优先级顺序评估。源码中的注释坦诚得令人耳目一新："我们一直在对返回类型撒谎"——所有四个 provider 特定的 SDK 类通过 `as unknown as Anthropic` 转换。这种有意的类型擦除意味着每个消费者看到统一的接口。代码库其余部分从不分支于 provider。
+分发完全由环境变量驱动，按固定优先级顺序评估。所有四个 provider 特定的 SDK 类通过 `as unknown as Anthropic` 转换。源码中的注释坦诚得令人耳目一新："我们一直在对返回类型撒谎"（"we have always been lying about the return type"）。这种有意的类型擦除意味着每个消费者看到统一的接口。代码库其余部分从不分支于 provider。
 
-每个 provider SDK 是动态 import 的——`AnthropicBedrock`、`AnthropicFoundry`、`AnthropicVertex` 是带有自己依赖树的重型模块。动态 import 确保未使用的 provider 从不加载。Provider 选择在启动时确定并存储在 STATE 中。查询循环从不检查哪个 provider 活跃。
+每个 provider SDK 是动态 import 的——`AnthropicBedrock`、`AnthropicFoundry`、`AnthropicVertex` 是带有自己依赖树的重型模块。动态 import 确保未使用的 provider 从不加载。
+
+Provider 选择在启动时确定并存储在 bootstrap `STATE` 中。查询循环从不检查哪个 provider 活跃。从 Direct API 切换到 Bedrock 是配置变更，而非代码变更。
+
+### buildFetch 包装器
+
+每个出站 fetch 被包装以注入 `x-client-request-id` 头——每个请求生成的 UUID。当请求超时时，服务器从不为响应分配请求 ID。没有客户端 ID，API 团队无法将超时与服务端日志关联。此头填补了这一空白。它仅发送到 Anthropic 一方 endpoint——第三方 provider 可能拒绝未知头。
+
+> 💡 **译注**：这看起来是个小细节，但对线上排障至关重要。Claude Code 的日志系统在整个请求链路中携带 `x-client-request-id`：API 层发起请求时生成 UUID 注入 header → 如果超时或出错，watchdog 触发时携带此 ID → 日志和遥测将该 ID 与服务端报告关联。没有这个 ID，生产环境中"某次请求为什么超时了"是无法回答的。
 
 ---
 
 ## System Prompt 构建
 
-System prompt 是整个系统中最缓存敏感的工作。Claude API 提供服务端 prompt caching：跨请求相同 prompt 前缀可被缓存，既节省延迟又节省成本。
+System prompt 是整个系统中最缓存敏感的工件。Claude API 提供服务端 prompt caching：跨请求相同 prompt 前缀可被缓存，既节省延迟又节省成本。一个 200K-token 对话可能有 50-70K token 与前一轮相同。破坏该缓存迫使服务器重新处理全部内容。
 
 ### Dynamic Boundary Marker
 
@@ -102,7 +110,9 @@ flowchart TD
     style Dynamic fill:#ddf,stroke:#333
 ```
 
-边界之前的一切跨会话、用户和组织相同——它获得最高级别服务端缓存。边界之后包含用户特定内容，降级到每会话缓存。节的命名约定故意很响亮。添加新节需要在 `systemPromptSection`（安全、缓存）和 `DANGEROUS_uncachedSystemPromptSection`（破坏缓存，需要理由字符串）之间选择。`_reason` 参数在运行时未使用，但作为强制性文档——每个破坏缓存的节都在源码中带有其理由。
+边界之前的一切跨会话、用户和组织相同——它获得最高级别服务端缓存。边界之后包含用户特定内容，降级到每会话缓存。
+
+节的命名约定故意很响亮。添加新节需要在 `systemPromptSection`（安全，可缓存）和 `DANGEROUS_uncachedSystemPromptSection`（破坏缓存，需要理由字符串）之间选择。`_reason` 参数在运行时未使用，但作为强制性文档——每个破坏缓存的节都在源码中带有其理由。
 
 ### 2^N 问题
 
@@ -114,92 +124,96 @@ flowchart TD
 
 这是一种直到你违反它才会注意到的约束。一个好意的工程师在边界之前添加一个用户设置门控的节，可能静默地碎片化全局缓存，并使机群的 prompt 处理成本翻倍。
 
-> 💡 **译注**：理解 2^N 问题——假设 prompt 中有 3 个布尔条件："是否启用了 auto mode？"、"是否是 Pro 用户？"、"是否激活了 KAIROS？"。每个条件产生 2 个变体（true/false），组合后共有 2³=8 个不同的 prompt 前缀变体。每个变体需要自己的缓存条目。如果有 5 个条件，就有 2⁵=32 个变体。现在想象整个用户群的缓存被碎片化到 32 个不同的缓存键中——缓存命中率从 90% 可能跌到 50%。这就是为什么条件节必须放在边界之后——边界之后的内容不在全局缓存中，条件不会碎片化缓存。
-
----
-
-## Slot Reservation
-
-这是 API 层最巧妙的成本优化。真实源码（`services/api/claude.ts`）：
-
-```typescript
-export function getMaxOutputTokensForModel(model: string): number {
-  const maxOutputTokens = getModelMaxOutputTokens(model)
-
-  // Slot-reservation cap: drop default to 8k for all models. BQ p99 output
-  // = 4,911 tokens; 32k/64k defaults over-reserve 8-16× slot capacity.
-  // Requests hitting the cap get one clean retry at 64k (query.ts
-  // max_output_tokens_escalate).
-  const defaultTokens = isMaxTokensCapEnabled()
-    ? Math.min(maxOutputTokens.default, CAPPED_DEFAULT_MAX_TOKENS)
-    : maxOutputTokens.default
-
-  return validateBoundedIntEnvVar(
-    'CLAUDE_CODE_MAX_OUTPUT_TOKENS',
-    process.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS,
-    defaultTokens,
-    maxOutputTokens.upperLimit,
-  ).effective
-}
-```
-
-源码注释："p99 输出 = 4,911 token"——99% 的 API 响应少于 5000 token。但默认 max_tokens 是 32K-64K。预留你实际需要的 6-12 倍容量会产生不必要的 API 成本（更大的 `max_tokens` = API 预留更多计算资源）。策略：先猜 8K（覆盖 99.9%），猜错升级到 64K 重试一次。
-
-当模型返回 `stop_reason: 'max_tokens'` 时：
-
-```typescript
-if (stopReason === 'max_tokens') {
-  logEvent('tengu_max_tokens_reached', { max_tokens: maxOutputTokens })
-  yield createAssistantAPIErrorMessage({
-    content: `Claude's response exceeded the ${maxOutputTokens} output token maximum.`,
-    apiError: 'max_output_tokens',
-    error: 'max_output_tokens',
-  })
-}
-```
-
-然后在 `query.ts` 中，恢复循环捕获此错误，升级限额到 `ESCALATED_MAX_TOKENS = 64_000`，重新请求。升级在查询持续时间内持久，下一次查询重置回 8K。
-
 ---
 
 ## 流式处理
 
 ### 原始 SSE 而非 SDK 抽象
 
-流式实现使用原始 `Stream<BetaRawMessageStreamEvent>` 而非 SDK 的 `BetaMessageStream`。原因：`BetaMessageStream` 在每个 `input_json_delta` 事件上调用 `partialParse()`。对于大型 JSON 输入的工具调用（数百行的文件编辑），这会在每个 chunk 上从头重新解析增长的 JSON 字符串——O(n²) 行为。Claude Code 自己处理工具输入累积，所以部分解析是纯粹的浪费。
+流式实现使用原始 `Stream<BetaRawMessageStreamEvent>` 而非 SDK 高层的 `BetaMessageStream`。原因：`BetaMessageStream` 在每个 `input_json_delta` 事件上调用 `partialParse()`。对于大型 JSON 输入的工具调用（数百行的文件编辑），这会在每个 chunk 上从头重新解析增长的 JSON 字符串——O(n²) 行为。Claude Code 自己处理工具输入累积，所以部分解析是纯粹的浪费。
 
 ### Idle Watchdog
 
-TCP 连接可能静默死亡。SDK 的超时只覆盖初始 fetch——一旦 HTTP 200 到达，超时就被满足了。如果流式 body 停止，没有东西捕获它。
+TCP 连接可能静默死亡。服务器可能崩溃，负载均衡器可能静默断开连接，或企业代理可能超时。SDK 的请求超时只覆盖初始 fetch——一旦 HTTP 200 到达，超时就被满足了。如果流式 body 停止，没有东西捕获它。
 
-Watchdog：一个 `setTimeout`，在每个接收到的 chunk 上重置。如果 90 秒内没有 chunk 到达，流被中止，系统回退到非流式重试。在 45 秒标记触发警告。
+Watchdog：一个 `setTimeout`，在每个接收到的 chunk 上重置。如果 90 秒内没有 chunk 到达，流被中止，系统回退到非流式重试。在 45 秒标记触发警告。当 watchdog 触发时，它用客户端请求 ID 记录事件以便关联。
 
 ### 非流式后备
 
 当流式在中途失败（网络错误、停滞、截断），系统回退到同步 `messages.create()` 调用。这处理代理失败（代理返回 HTTP 200 但 body 不是 SSE，或截断了 SSE 流）。
 
+当流式工具执行活跃时，可以禁用 fallback，因为 fallback 会重新执行整个请求并可能运行工具两次。
+
 ---
 
 ## Prompt Cache 系统
 
-Prompt caching 将处理上下文的成本降低约 90%。Cache 是脆弱的：缓存前缀中改变一个字节就完全无效化它。稳定内容在请求之间稳定的 prompt 部分放在前面。易变部分（对话历史、最新工具结果）放在最后。这种架构选择驱动了整个代码库中的决策：sticky latches（第 3 章）、skill 元数据格式、工具定义顺序、Fork agent 的逐字节相同前缀（第 9 章）。
+### 三个层级
+
+Prompt caching 在三个层级运作：
+
+**Ephemeral cache**（默认）：按会话缓存，服务器定义的 TTL（~5 分钟）。所有用户获得此级别。
+
+**1 小时 TTL**：符合条件的用户获得扩展缓存。资格由订阅状态确定并锁定在 bootstrap state 中——第 3 章的 `promptCache1hEligible` sticky latch 确保会话中途的额度翻转不会改变 TTL。
+
+**Global scope**：System prompt 缓存条目获得跨会话、跨组织共享。Prompt 的静态部分对所有 Claude Code 用户相同，因此单个缓存副本服务所有人。当 MCP 工具存在时，Global scope 被禁用，因为 MCP 工具定义是用户特定的，会将缓存碎片化为数百万个唯一前缀。
+
+### Sticky Latches 的实际运作
+
+第 3 章的五个 sticky latch 在此处、在请求构建期间被评估。每个 latch 从 `null` 开始，一旦设置为 `true`，在整个会话中保持 `true`。latch 块上方的注释精确表述："用于动态 beta 头的 Sticky-on latch。每个头，一旦首次发送，在会话其余时间持续发送，以便会话中途的切换不会改变服务端缓存键并破坏约 50-70K token。"
+
+参见第 3 章 3.1 节了解 latch 模式、五个具体 latch 的完整解释，以及为什么 always-send-all-headers 不是正确的解决方案。
 
 ---
 
-## 错误恢复
+## queryModel Generator
 
-**网络错误** 通过指数退避重试。只有临时错误（5xx、连接重置、DNS 故障）被重试。**模型不可用** 触发 provider 回退到后备模型。**Max output tokens** 触发 slot 升级（8K→64K，最多 3 次）。**Circuit breaker（断路器）** 防止自动压缩连续失败三次后的无限循环。
+`queryModel()` 函数是一个编排整个 API 调用生命周期的 async generator（约 700 行）。它产出 `StreamEvent`、`AssistantMessage` 和 `SystemAPIErrorMessage` 对象。
+
+请求组装遵循精心排序的序列：
+
+1. **Kill switch 检查**——最昂贵模型层级的安全阀
+2. **Beta header 组装**——模型特定，应用 sticky latch
+3. **工具 schema 构建**——通过 `Promise.all()` 并行，延迟工具在发现前排除
+4. **消息规范化**——修复孤立的 tool_use/tool_result 不匹配、剥离多余媒体、移除过期块
+5. **System prompt 块构建**——在动态边界处分割，分配缓存范围
+6. **带重试包装的流式处理**——处理 529（过载）、模型 fallback、thinking 降级、OAuth 刷新
+
+### Output Token 上限
+
+默认 output 上限是 8,000 token，而非典型的 32K 或 64K。生产数据表明 p99 输出 = 4,911 token——标准限制超额预留 8-16 倍。当响应命中上限时（<1% 请求），获得一次干净的 64K 重试。这在机群规模上节省了大量成本。
+
+### 错误处理和重试
+
+`withRetry()` 函数本身是一个产出 `SystemAPIErrorMessage` 事件的 async generator，以便 UI 可以显示重试状态。重试策略：
+
+- **529（过载）**：等待并重试，可选降级 fast mode
+- **模型 fallback**：主模型失败，尝试 fallback（例如 Opus 到 Sonnet）
+- **Thinking 降级**：上下文窗口溢出触发减少 thinking 预算
+- **OAuth 401**：刷新 token 并重试一次
+
+Generator 模式意味着重试进度（"服务器过载，5 秒后重试……"）作为事件流的自然部分出现，而非侧通道通知。
+
+> 💡 **译注**：`withRetry()` 是一个 generator 包装器——它不是抛出异常然后被上层捕获，而是 yield `SystemAPIErrorMessage` 事件。这带来两个好处：(1) UI 可以即时显示重试状态而不需要额外的通知通道；(2) 调用者通过 `for await` 循环自然接收重试进度，不需要 try-catch 嵌套。
 
 ---
 
 ## Apply This
 
-**稳定内容在前，易变内容在后。** 在构建时考虑缓存键结构。2^N 问题是真实存在的——边界之前的每个布尔条件翻倍全局缓存条目。
+**将 prompt caching 视为架构约束，而非功能开关。** 大多数 LLM 应用"开启"缓存。Claude Code 将其视为塑造 prompt 排序、节 memoization、header latching 和配置管理的设计约束。结构良好的 prompt（50K token 缓存命中）与结构不良的 prompt（每轮完整重新处理）之间的差异，是系统中最大的成本杠杆。
 
-**Slot reservation：为常见情况预留少，为罕见情况升级。** p99 = 4,911 token。默认 8K。仅在模型命中上限时升级到 64K。
+**对代价高昂的逃生口使用 DANGEROUS 命名约定。** 当代码库有一个容易意外违反的不变量时，用响亮的前缀命名逃生口做三件事：使违规在代码审查中可见、强制文档（必需的 reason 参数）、并创造朝向安全默认值的心理摩擦。这适用于超出缓存的任何具有不可见成本的操作。
 
-**流式处理需要活跃故障检测。** TCP 连接静默死亡。90 秒 idle watchdog + 非流式后备确保请求不会无限挂起。
+**构建流式处理时使用 watchdog，而不仅仅是超时。** SDK 的请求超时在 HTTP 200 时就被满足了，但响应 body 可能在任何时刻停止到达。一个在每个 chunk 上重置的 `setTimeout` 捕获这种情况。非流式 fallback 处理代理故障模式（HTTP 200 但非 SSE body、中间截断的 SSE 流），这些在企业环境中比你预期的更常见。
 
-**Provider 抽象是配置，而不是代码。** 查询循环不应该知道或关心哪个云 provider 正在提供模型响应。类型擦除使这个隔离成为可能。
+**使重试策略基于 yield 而非基于异常。** 通过使重试包装器成为产出状态事件的 async generator，调用者将重试进度显示为事件流的自然部分。模型 fallback 模式（Opus 失败，尝试 Sonnet）对生产韧性特别有用。
 
-**缓存稳定性是架构性的。** `DANGEROUS_uncachedSystemPromptSection` 的命名约定通过使成本可见来执行纪律。
+**将快速路径与完整流水线分开。** 并非每个 API 调用都需要工具搜索、advisor 集成、thinking 预算和流式基础设施。Claude Code 的 `queryHaiku()` 函数为内部操作（压缩、分类）提供了精简路径，跳过了所有 agentic 关注点。一个带有简化接口的单独函数防止意外的复杂性泄漏。
+
+---
+
+## 展望
+
+API 层位于后续一切的基础之上。第 5 章将展示查询循环如何使用流式响应驱动工具执行——包括工具在模型完成响应之前就开始执行。第 6 章将解释压缩系统如何在对话接近上下文限制时保持缓存效率。第 7 章将展示每个 agent 线程如何获得自己的消息数组和请求链。
+
+所有这些系统都继承了此处建立的约束：缓存稳定性作为架构不变量、通过客户端工厂实现 provider 透明性、以及通过 latch 系统实现会话稳定配置。API 层不仅仅发送请求——它定义了所有其他系统运作的规则。
