@@ -52,6 +52,12 @@ html.dark .chapter-prose h2 {
   padding-top: 0;
 }
 
+/* Prevent double line: <hr> + <h2> border-top creates two adjacent horizontal lines */
+.chapter-prose hr + h2 {
+  border-top: none;
+  padding-top: 0;
+}
+
 .chapter-prose h3 {
   font-family: var(--font-serif);
   font-size: 1.25rem;
