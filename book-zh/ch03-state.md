@@ -340,7 +340,7 @@ setState: (updater: (prev: T) => T) => {
 
 ## 3.5 上下文构建
 
-`context.ts` 中三个 memoized（缓存化）的异步函数构建追加到每次对话的 system prompt 上下文。每个每会话计算一次，而非每轮次。
+`context.ts` 中三个 memoized（缓存化）的异步函数构建追加到每次对话的 system prompt 上下文。每个函数以会话（session）为粒度计算一次，而非每轮（turn）都重新计算。
 
 `getGitStatus` 并行运行五个 git 命令（`Promise.all`），生成包含当前分支、默认分支、最近提交和工作树状态的块。`--no-optional-locks` 标志防止 git 获取可能干扰另一个终端中并发 git 操作的写锁。
 
