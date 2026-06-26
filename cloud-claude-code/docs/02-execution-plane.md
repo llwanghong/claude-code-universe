@@ -441,24 +441,19 @@ export async function* executeBatches(
 
 ### 4.1 沙箱层级
 
-```
-┌──────────────────────────────────────────────┐
-│              Agent Pod (K8s)                  │
-│                                               │
-│  ┌────────────────────────────────────────┐  │
-│  │         gVisor Sandbox (runsc)         │  │
-│  │                                         │  │
-│  │  ┌──────────────────────────────────┐  │  │
-│  │  │  Container                        │  │  │
-│  │  │  - 只读根文件系统                  │  │  │
-│  │  │  - /workspace: 唯一可写目录        │  │  │
-│  │  │  - /tmp: 临时文件（内存 tmpfs）    │  │  │
-│  │  │  - 预装工具: git, node, python,   │  │  │
-│  │  │    ripgrep, fd                    │  │  │
-│  │  │  - 每个命令: seccomp profile      │  │  │
-│  │  └──────────────────────────────────┘  │  │
-│  └────────────────────────────────────────┘  │
-└──────────────────────────────────────────────┘
+```mermaid
+block-beta
+    columns 1
+    block:k8s["K8s Agent Pod"]
+        columns 1
+        block:gvisor["gVisor Sandbox (runsc) — 用户态内核，拦截危险 syscall"]
+            columns 1
+            block:container["Container\n• 只读根文件系统\n• /workspace: 唯一可写目录\n• /tmp: 临时文件 (tmpfs)\n• 预装工具: git, node, python, ripgrep, fd\n• 每个命令: seccomp profile"]
+        end
+    end
+    style k8s fill:#e3f2fd,stroke:#1976d2
+    style gvisor fill:#fff3e0,stroke:#f57c00
+    style container fill:#e8f5e9,stroke:#388e3c
 ```
 
 ### 4.2 命令分类器
@@ -541,42 +536,24 @@ export const SANDBOX_LIMITS = {
 
 ## 5. Workspace 生命周期
 
-```
-┌──────────────────────────────────────────────────────┐
-│              Workspace Lifecycle                       │
-│                                                       │
-│  Session Start                                        │
-│       │                                               │
-│       ▼                                               │
-│  ┌──────────┐                                         │
-│  │ 1. Clone │  git clone --shared --reference         │
-│  │    (快)   │  <cache>/myapp.git → /ws/{uuid}        │
-│  └────┬─────┘                                         │
-│       │                                               │
-│       ▼                                               │
-│  ┌──────────┐                                         │
-│  │ 2. Branch│  git checkout -b agent-{uuid}           │
-│  └────┬─────┘                                         │
-│       │                                               │
-│       ▼                                               │
-│  ┌──────────┐                                         │
-│  │ 3. Work  │  Agent 在这个 workspace 中读/写/执行    │
-│  │          │  所有修改在临时分支上                    │
-│  └────┬─────┘                                         │
-│       │                                               │
-│  ┌────┴────┐                                          │
-│  ▼         ▼                                          │
-│ Success   Failure                                     │
-│  │         │                                          │
-│  ▼         ▼                                          │
-│ PR Created  Workspace Discarded                       │
-│  │         │                                          │
-│  ▼         │                                          │
-│ Cleanup ◀──┘                                          │
-│  - 删除 workspace volume                              │
-│  - 删除临时分支（如果 PR 已合并/拒绝）                │
-│  - 更新 session 状态                                  │
-└──────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Start(["Session Start"]) --> S1["1. Clone\n git clone --shared --reference\n cache/myapp.git → /ws/uuid"]
+    S1 --> S2["2. Branch\n git checkout -b agent-uuid"]
+    S2 --> S3["3. Work\n Agent 在 workspace 中读/写/执行\n 所有修改在临时分支上"]
+    S3 --> Decision{结果}
+    Decision -->|"Success"| PR["PR Created"]
+    Decision -->|"Failure"| Discard["Workspace Discarded"]
+    PR --> Cleanup["Cleanup\n • 删除 workspace volume\n • 删除临时分支\n • 更新 session 状态"]
+    Discard --> Cleanup
+
+    style Start fill:#e3f2fd,stroke:#1976d2
+    style S1 fill:#fff3e0,stroke:#f57c00
+    style S2 fill:#fff3e0,stroke:#f57c00
+    style S3 fill:#e8f5e9,stroke:#388e3c
+    style PR fill:#c8e6c9,stroke:#2e7d32
+    style Discard fill:#ffcdd2,stroke:#c62828
+    style Cleanup fill:#f3e5f5,stroke:#7b1fa2
 ```
 
 ---

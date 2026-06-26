@@ -30,67 +30,64 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 
 ## 2. 总体架构：五层平面
 
+```mermaid
+flowchart TB
+    subgraph ACCESS["🌐 ACCESS PLANE — 用户入口"]
+        direction LR
+        Web["Web App<br/>(React)"]
+        VSCode["VS Code<br/>Extension"]
+        JetBrains["JetBrains<br/>Extension"]
+        CLI["CLI Client<br/>(thin proxy)"]
+        Web & VSCode & JetBrains & CLI --> Gateway["API Gateway<br/>auth / route / rate-limit"]
+    end
+
+    subgraph CONTROL["🎛️ CONTROL PLANE — 管控层"]
+        direction LR
+        Auth["Auth Service<br/>(SSO/OIDC)"]
+        Session["Session Manager<br/>(state machine)"]
+        Orch["Agent Orchestrator<br/>(coordinator pattern)"]
+        Config["Config Service<br/>(projects, settings)"]
+        Router["Model Router<br/>(public→external, restricted→private)"]
+        Perm["Permission Engine<br/>(7 modes + approval)"]
+        Auth --> Session --> Orch
+        Orch --> Router
+        Orch --> Perm
+        Config --> Session
+    end
+
+    subgraph EXEC["⚙️ EXECUTION PLANE — 执行层"]
+        direction TB
+        subgraph Pod["Agent Pod (per session)"]
+            direction LR
+            Loop["query() Loop<br/>(ch05 generator)"]
+            Tools["Tool Pipeline<br/>(ch06 14-step)"]
+            Context["Context Manager<br/>(4-layer compaction)"]
+        end
+        RepoSvc["Repo Service<br/>(GitLab/Bitbucket)"]
+        BuildSvc["Build/CI Service<br/>(Jenkins/GitLab CI)"]
+        MCPReg["MCP Servers<br/>(internal tools registry)"]
+        Pod --> RepoSvc & BuildSvc & MCPReg
+    end
+
+    subgraph DATA["💾 DATA PLANE — 数据层"]
+        direction LR
+        S3["Object Storage<br/>(S3/MinIO)"]
+        Redis["Redis Cache<br/>(session, prompt)"]
+        Vector["Vector Store<br/>(Milvus/Qdrant)"]
+        PG["PostgreSQL<br/>(users, permissions)"]
+    end
+
+    Gateway --> Auth
+    Orch --> Pod
+    Pod --> DATA
+
+    style ACCESS fill:#e3f2fd,stroke:#1976d2,color:#000
+    style CONTROL fill:#fff3e0,stroke:#f57c00,color:#000
+    style EXEC fill:#e8f5e9,stroke:#388e3c,color:#000
+    style DATA fill:#f3e5f5,stroke:#7b1fa2,color:#000
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        ACCESS PLANE                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐  │
-│  │ Web App  │  │ VS Code   │  │ JetBrains│  │  CLI Client   │  │
-│  │ (React)  │  │ Extension │  │ Extension│  │  (thin proxy) │  │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └───────┬───────┘  │
-│       └─────────────┴─────────────┴──────────────────┘          │
-│                            │                                     │
-│                   ┌────────▼────────┐                           │
-│                   │   API Gateway   │                           │
-│                   │ (auth/route/rl) │                           │
-│                   └────────┬────────┘                           │
-└────────────────────────────┼──────────────────────────────────────┘
-                             │
-┌────────────────────────────┼──────────────────────────────────────┐
-│                        CONTROL PLANE                              │
-│                            │                                      │
-│   ┌──────────────┐  ┌─────▼──────┐  ┌───────────────────┐       │
-│   │  Auth Service │  │  Session   │  │  Agent            │       │
-│   │  (SSO/OIDC)  │  │  Manager   │  │  Orchestrator     │       │
-│   └──────────────┘  └────────────┘  └─────────┬─────────┘       │
-│                                                │                  │
-│   ┌──────────────┐  ┌────────────┐  ┌─────────▼─────────┐       │
-│   │  Config Svc  │  │   Model    │  │   Permission      │       │
-│   │  (projects,  │  │   Router   │  │   Engine          │       │
-│   │   settings)  │  │            │  │   (7 modes + 审批)│       │
-│   └──────────────┘  └────────────┘  └───────────────────┘       │
-└──────────────────────────────────────────────────────────────────┘
-                             │
-┌────────────────────────────┼──────────────────────────────────────┐
-│                        EXECUTION PLANE                            │
-│                            │                                      │
-│   ┌────────────────────────▼──────────────────────────┐          │
-│   │              Agent Runtime (per session)            │          │
-│   │  ┌──────────┐ ┌──────────┐ ┌───────────────────┐  │          │
-│   │  │ query()  │ │  Tool    │ │ Context & Memory   │  │          │
-│   │  │ Loop     │ │ Pipeline │ │ Compaction         │  │          │
-│   │  │ (ch05)   │ │ (ch06)   │ │ (ch05 + ch11)      │  │          │
-│   │  └──────────┘ └──────────┘ └───────────────────┘  │          │
-│   │  ┌──────────┐ ┌──────────┐ ┌───────────────────┐  │          │
-│   │  │ Repo     │ │  Shell   │ │ MCP Bridge         │  │          │
-│   │  │ Workspace│ │ Sandbox  │ │ (internal tools)   │  │          │
-│   │  └──────────┘ └──────────┘ └───────────────────┘  │          │
-│   └────────────────────────────────────────────────────┘          │
-│   ┌──────────┐  ┌──────────▼───┐  ┌──────────────┐              │
-│   │  Repo    │  │  Build/CI    │  │  Internal     │              │
-│   │  Service │  │  Service     │  │  MCP Servers  │              │
-│   └──────────┘  └──────────────┘  └──────────────┘              │
-└──────────────────────────────────────────────────────────────────┘
-                             │
-┌────────────────────────────┼──────────────────────────────────────┐
-│                         DATA PLANE                                │
-│   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│   │ Object   │  │  Redis   │  │  Vector  │  │   Postgres   │   │
-│   │ Storage  │  │  Cache   │  │  Store   │  │   (user/perm)│   │
-│   │(S3/MinIO)│  │(session, │  │(Milvus/  │  │              │   │
-│   │          │  │ prompt)  │  │ Qdrant)  │  │              │   │
-│   └──────────┘  └──────────┘  └──────────┘  └──────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-```
+
+### 层间数据流
 
 ### 层间数据流
 
@@ -122,30 +119,16 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 
 ### 3.2 Web 应用核心布局
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Header                                              │
-│  [Project: my-app ▼] [Session Tabs] [Settings] [👤]  │
-├────────────┬────────────────────────────────────────┤
-│            │                                        │
-│  File Tree │  Conversation Area                      │
-│            │  ┌──────────────────────────────────┐  │
-│  src/      │  │  🤖 Let me look at the code...   │  │
-│  ├─ auth/  │  │  ```diff                        │  │
-│  ├─ api/   │  │  - old code                      │  │
-│  └─ ...    │  │  + new code                      │  │
-│            │  │  ```                             │  │
-│            │  └──────────────────────────────────┘  │
-│            │  ┌──────────────────────────────────┐  │
-│            │  │  Permission: Run git push?       │  │
-│            │  │  [Allow] [Deny] [Always Allow]   │  │
-│            │  └──────────────────────────────────┘  │
-│            ├────────────────────────────────────────┤
-│            │  Prompt Input                           │
-│            │  > Fix the auth bug @src/auth/login.ts │
-│            │  [📎 Attach] [/ Commands] [Send ⏎]     │
-│            └────────────────────────────────────────┘
-└──────────────────────────────────────────────────────┘
+```mermaid
+block-beta
+    columns 1
+    block:header["Header: [Project Selector ▼] [Session Tabs] [Settings] [👤 User]"]
+    end
+    columns 2
+    block:sidebar["Sidebar\n\nFile Tree\nsrc/\n├─ auth/\n├─ api/\n└─ ...\n\nAgent Status\n🟢 General\n🟡 Explore\n⚪ Verify\n\nMemory Panel"]
+    end
+    block:main["Main Content\n\nConversation View\n┌──────────────────────────────┐\n│ 🤖 Streaming markdown...    │\n│ ```diff                     │\n│ - old code                  │\n│ + new code                  │\n│ ```                         │\n└──────────────────────────────┘\n\nPermission Dialog\n┌──────────────────────────────┐\n│ 🔐 Run: git push origin?    │\n│ [Allow] [Deny] [Always]     │\n└──────────────────────────────┘\n\nPrompt Input\n> Fix the auth bug @src/auth/login.ts\n[📎 Attach] [/ Commands] [Send ⏎]"]
+    end
 ```
 
 关键功能：
