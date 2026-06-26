@@ -9,6 +9,7 @@ on:
       - 'deep-dive/**'
       - 'supplements/**'
       - 'ai-sdk/**'
+      - 'cloud-claude-code/**'
       - '.github/workflows/deploy-book.yml'
   workflow_dispatch:
 
