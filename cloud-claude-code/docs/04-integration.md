@@ -2,9 +2,6 @@
 
 > 版本：v1.0 | 日期：2026-06-26 | 依赖：[总体架构](./01-architecture-design.md)
 
-## 1. 集成架构总览
-
-
 ---
 
 ## 2. 代码仓库集成（Git Service）
@@ -171,9 +168,6 @@ const jiraMcp: MCPServerDefinition = {
   }
 }
 ```
-
-### 4.3 工具可见性矩阵
-
 
 ---
 

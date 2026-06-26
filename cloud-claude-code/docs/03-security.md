@@ -16,17 +16,11 @@
 | **Supply Chain** — 恶意 MCP 服务器或 plugin | 中 | MCP/Plugin 安装 |
 | **Credential Theft** — token/密钥被 agent 或中间人窃取 | 极高 | 文件系统、环境变量、网络 |
 
-### 1.2 信任边界
-
-
----
-
-## 2. 纵深防御（6 层）
-
-
 ---
 
 ## 3. 权限模型详细设计
+
+> 📐 交互式权限流程图见页面底部。
 
 ### 3.1 权限决策流程
 
@@ -116,9 +110,6 @@ export function sanitizeForExternalAPI(content: string, projectLevel: string): s
 }
 ```
 
-### 4.3 Token 管理
-
-
 ---
 
 ## 5. 代码仓库安全
@@ -193,9 +184,6 @@ groups:
         annotations:
           summary: "Restricted project accessed outside business hours"
 ```
-
-### 6.2 事件响应
-
 
 ---
 

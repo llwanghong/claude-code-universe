@@ -189,6 +189,8 @@ export async function* executeBatches(
 
 ## 4. Shell Sandbox 设计
 
+> 📐 交互式架构图见页面底部。
+
 ### 4.1 沙箱层级
 
 
@@ -267,11 +269,6 @@ export const SANDBOX_LIMITS = {
   ],
 }
 ```
-
----
-
-## 5. Workspace 生命周期
-
 
 ---
 
