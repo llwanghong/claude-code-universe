@@ -442,18 +442,13 @@ export async function* executeBatches(
 ### 4.1 沙箱层级
 
 ```mermaid
-block-beta
-    columns 1
-    block:k8s["K8s Agent Pod"]
-        columns 1
-        block:gvisor["gVisor Sandbox (runsc) — 用户态内核，拦截危险 syscall"]
-            columns 1
-            block:container["Container\n• 只读根文件系统\n• /workspace: 唯一可写目录\n• /tmp: 临时文件 (tmpfs)\n• 预装工具: git, node, python, ripgrep, fd\n• 每个命令: seccomp profile"]
-        end
-    end
-    style k8s fill:#e3f2fd,stroke:#1976d2
-    style gvisor fill:#fff3e0,stroke:#f57c00
-    style container fill:#e8f5e9,stroke:#388e3c
+graph TD
+    K8s["🖥️ K8s Agent Pod"] --> GVisor["🛡️ gVisor Sandbox (runsc)<br/>用户态内核，拦截危险 syscall"]
+    GVisor --> Container["📦 Container<br/>• 只读根文件系统<br/>• /workspace: 唯一可写目录<br/>• /tmp: 临时文件 (tmpfs)<br/>• 预装: git, node, python, ripgrep<br/>• 每个命令: seccomp profile"]
+
+    style K8s fill:#e3f2fd,stroke:#1976d2
+    style GVisor fill:#fff3e0,stroke:#f57c00
+    style Container fill:#e8f5e9,stroke:#388e3c
 ```
 
 ### 4.2 命令分类器

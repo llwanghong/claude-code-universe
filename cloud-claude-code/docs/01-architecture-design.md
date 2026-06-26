@@ -31,60 +31,48 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 ## 2. 总体架构：五层平面
 
 ```mermaid
-flowchart TB
-    subgraph ACCESS["🌐 ACCESS PLANE — 用户入口"]
-        direction LR
-        Web["Web App<br/>(React)"]
-        VSCode["VS Code<br/>Extension"]
-        JetBrains["JetBrains<br/>Extension"]
-        CLI["CLI Client<br/>(thin proxy)"]
-        Web & VSCode & JetBrains & CLI --> Gateway["API Gateway<br/>auth / route / rate-limit"]
-    end
+graph TD
+    Web["🌐 Web App (React)"] --> Gateway
+    VSCode["💻 VS Code Extension"] --> Gateway
+    JetBrains["💻 JetBrains Plugin"] --> Gateway
+    CLI["⌨️ CLI Client"] --> Gateway
+    Gateway["🔐 API Gateway<br/>auth / route / rate-limit"]
 
-    subgraph CONTROL["🎛️ CONTROL PLANE — 管控层"]
-        direction LR
-        Auth["Auth Service<br/>(SSO/OIDC)"]
-        Session["Session Manager<br/>(state machine)"]
-        Orch["Agent Orchestrator<br/>(coordinator pattern)"]
-        Config["Config Service<br/>(projects, settings)"]
-        Router["Model Router<br/>(public→external, restricted→private)"]
-        Perm["Permission Engine<br/>(7 modes + approval)"]
-        Auth --> Session --> Orch
-        Orch --> Router
-        Orch --> Perm
-        Config --> Session
-    end
+    Gateway --> Auth["Auth Service<br/>(SSO/OIDC)"]
+    Gateway --> Session["Session Manager<br/>(state machine)"]
+    Gateway --> Orch["Agent Orchestrator<br/>(coordinator pattern)"]
+    Gateway --> Config["Config Service<br/>(projects/settings)"]
 
-    subgraph EXEC["⚙️ EXECUTION PLANE — 执行层"]
-        direction TB
-        subgraph Pod["Agent Pod (per session)"]
-            direction LR
-            Loop["query() Loop<br/>(ch05 generator)"]
-            Tools["Tool Pipeline<br/>(ch06 14-step)"]
-            Context["Context Manager<br/>(4-layer compaction)"]
-        end
-        RepoSvc["Repo Service<br/>(GitLab/Bitbucket)"]
-        BuildSvc["Build/CI Service<br/>(Jenkins/GitLab CI)"]
-        MCPReg["MCP Servers<br/>(internal tools registry)"]
-        Pod --> RepoSvc & BuildSvc & MCPReg
-    end
+    Auth --> Session
+    Session --> Orch
 
-    subgraph DATA["💾 DATA PLANE — 数据层"]
-        direction LR
-        S3["Object Storage<br/>(S3/MinIO)"]
-        Redis["Redis Cache<br/>(session, prompt)"]
-        Vector["Vector Store<br/>(Milvus/Qdrant)"]
-        PG["PostgreSQL<br/>(users, permissions)"]
-    end
+    Orch --> Router["Model Router<br/>public→external / restricted→private"]
+    Orch --> Perm["Permission Engine<br/>7 modes + approval flow"]
+    Config --> Session
 
-    Gateway --> Auth
-    Orch --> Pod
-    Pod --> DATA
+    Orch --> Pod["⚙️ Agent Pod (per session)"]
+    Pod --> Loop["query() Loop<br/>(ch05 generator)"]
+    Pod --> ToolPipe["Tool Pipeline<br/>(ch06 14-step)"]
+    Pod --> CtxMgr["Context Manager<br/>(4-layer compaction)"]
+    Pod --> RepoWS["Repo Workspace<br/>(CoW overlay)"]
+    Pod --> Sandbox["Shell Sandbox<br/>(gVisor)"]
+    Pod --> MCPBridge["MCP Bridge<br/>(internal tools)"]
 
-    style ACCESS fill:#e3f2fd,stroke:#1976d2,color:#000
-    style CONTROL fill:#fff3e0,stroke:#f57c00,color:#000
-    style EXEC fill:#e8f5e9,stroke:#388e3c,color:#000
-    style DATA fill:#f3e5f5,stroke:#7b1fa2,color:#000
+    Loop --> DataLayer
+    ToolPipe --> DataLayer
+
+    RepoSvc["Repo Service<br/>(GitLab/Bitbucket)"] --- Pod
+    BuildSvc["Build/CI Service<br/>(Jenkins/GitLab CI)"] --- Pod
+    MCPReg["MCP Server Registry"] --- Pod
+
+    DataLayer["💾 DATA PLANE"] --> S3["Object Storage<br/>(S3/MinIO)"]
+    DataLayer --> Redis["Redis Cache"]
+    DataLayer --> Vector["Vector Store<br/>(Milvus/Qdrant)"]
+    DataLayer --> PG["PostgreSQL<br/>(users/permissions)"]
+
+    style Gateway fill:#e3f2fd,stroke:#1976d2
+    style Pod fill:#e8f5e9,stroke:#388e3c
+    style DataLayer fill:#f3e5f5,stroke:#7b1fa2
 ```
 
 ### 层间数据流
@@ -120,15 +108,25 @@ flowchart TB
 ### 3.2 Web 应用核心布局
 
 ```mermaid
-block-beta
-    columns 1
-    block:header["Header: [Project Selector ▼] [Session Tabs] [Settings] [👤 User]"]
-    end
-    columns 2
-    block:sidebar["Sidebar\n\nFile Tree\nsrc/\n├─ auth/\n├─ api/\n└─ ...\n\nAgent Status\n🟢 General\n🟡 Explore\n⚪ Verify\n\nMemory Panel"]
-    end
-    block:main["Main Content\n\nConversation View\n┌──────────────────────────────┐\n│ 🤖 Streaming markdown...    │\n│ ```diff                     │\n│ - old code                  │\n│ + new code                  │\n│ ```                         │\n└──────────────────────────────┘\n\nPermission Dialog\n┌──────────────────────────────┐\n│ 🔐 Run: git push origin?    │\n│ [Allow] [Deny] [Always]     │\n└──────────────────────────────┘\n\nPrompt Input\n> Fix the auth bug @src/auth/login.ts\n[📎 Attach] [/ Commands] [Send ⏎]"]
-    end
+graph TD
+    Header["Header: Project Selector | Session Tabs | Settings | User"]
+    Sidebar["Sidebar: File Tree + Agent Status + Memory"]
+    Main["Main Content"]
+    ConvView["Conversation View: Streaming Markdown + Code Diff"]
+    PermDialog["Permission Dialog: Allow / Deny / Always Allow"]
+    PromptInput["Prompt Input: @mentions / /commands / Attach / Send"]
+
+    Header --> Sidebar
+    Header --> Main
+    Sidebar -.-> Main
+    Main --> ConvView
+    Main --> PermDialog
+    Main --> PromptInput
+    ConvView -.-> PermDialog
+
+    style Header fill:#e3f2fd,stroke:#1976d2
+    style Sidebar fill:#fff3e0,stroke:#f57c00
+    style Main fill:#e8f5e9,stroke:#388e3c
 ```
 
 关键功能：
