@@ -17,6 +17,7 @@ This repository combines three independent resources into one structured learnin
 | **[Deep Dive Notes](./deep-dive/)** | Original | 8 articles + roadmap | Frontend engineer's view: source code comparison + frontend takeaways |
 | **[Supplements](./supplements/)** | Original | 7 articles | Topics not covered in deep-dive: bootstrap, concurrency, MCP, etc. |
 | **[Chinese Translation](./book-zh/)** | Original | 18 chapters | Full Chinese translation of the book |
+| **[Cloud Claude Code](./cloud-claude-code/)** 🆕 | Original | Architecture + Implementation | Enterprise cloud agent platform — design docs & UI |
 
 ## Quick Start
 
