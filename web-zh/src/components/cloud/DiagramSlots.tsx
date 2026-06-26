@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import CloudArchitectureDiagram from './CloudArchitectureDiagram';
 import ExecutionPlaneDiagram from './ExecutionPlaneDiagram';
@@ -13,32 +13,23 @@ const DIAGRAMS: Record<string, React.ComponentType> = {
 };
 
 export default function DiagramSlots() {
-  const [ready, setReady] = useState(false);
-
   useEffect(() => {
-    setReady(true);
+    const slots = document.querySelectorAll<HTMLElement>('.diagram-slot');
+    const rendered = new Set<Element>();
+
+    slots.forEach((slot) => {
+      if (rendered.has(slot)) return;
+      rendered.add(slot);
+
+      const name = slot.getAttribute('data-diagram');
+      if (!name) return;
+
+      const Diagram = DIAGRAMS[name];
+      if (Diagram) {
+        createRoot(slot).render(<Diagram />);
+      }
+    });
   }, []);
-
-  if (!ready) return null;
-
-  // Find all diagram slots and render the matching component into each
-  const slots = document.querySelectorAll('.diagram-slot');
-  const rendered = new Set<string>();
-
-  slots.forEach((slot) => {
-    const name = slot.getAttribute('data-diagram');
-    const index = slot.getAttribute('data-diagram-index');
-    if (!name || !index) return;
-
-    const key = `${name}-${index}`;
-    if (rendered.has(key)) return;
-    rendered.add(key);
-
-    const Diagram = DIAGRAMS[name];
-    if (Diagram) {
-      createRoot(slot).render(<Diagram />);
-    }
-  });
 
   return null;
 }
