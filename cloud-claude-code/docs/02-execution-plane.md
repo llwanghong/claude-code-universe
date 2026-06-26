@@ -2,6 +2,8 @@
 
 > 版本：v1.0 | 日期：2026-06-26 | 依赖：[总体架构](./01-architecture-design.md)
 
+
+:::diagram ExecutionPlaneDiagram:::
 ## 1. 设计目标
 
 执行层是云端 Claude Code 的核心——这里运行着实际的 agent loop、tool pipeline 和 sandbox。设计目标：

@@ -2,6 +2,8 @@
 
 > 版本：v1.0 | 日期：2026-06-26 | 依赖：[总体架构](./01-architecture-design.md)
 
+
+:::diagram PermissionFlowDiagram:::
 ## 1. 威胁模型
 
 ### 1.1 我们防范什么

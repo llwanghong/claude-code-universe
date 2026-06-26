@@ -30,7 +30,7 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 
 ## 2. 总体架构：五层平面
 
-> 📐 交互式架构图见页面底部。
+:::diagram CloudArchitectureDiagram:::
 
 **关键设计**：每层只与相邻层通信，不跨层调用。Access 不知道 Agent Pod 的存在，Data 不知道用户是谁。
 

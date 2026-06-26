@@ -1,10 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import CloudArchitectureDiagram from '../../components/cloud/CloudArchitectureDiagram.tsx';
-import SecurityLayersDiagram from '../../components/cloud/SecurityLayersDiagram.tsx';
-import ExecutionPlaneDiagram from '../../components/cloud/ExecutionPlaneDiagram.tsx';
-import PermissionFlowDiagram from '../../components/cloud/PermissionFlowDiagram.tsx';
+import DiagramSlots from '../../components/cloud/DiagramSlots.tsx';
 
 const titles: Record<string, string> = {
   '01-architecture-design': '总体架构设计',
@@ -48,10 +45,6 @@ const { Content } = await render(entry);
       <Content />
     </article>
 
-    <div class="my-12 not-prose">
-      {entry.id === '01-architecture-design' && <CloudArchitectureDiagram client:load />}
-      {entry.id === '02-execution-plane' && <ExecutionPlaneDiagram client:load />}
-      {entry.id === '03-security' && <PermissionFlowDiagram client:load />}
-    </div>
+    <DiagramSlots client:load />
   </main>
 </BaseLayout>
