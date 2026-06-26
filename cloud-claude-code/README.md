@@ -11,10 +11,10 @@
 | 文档 | 状态 | 说明 |
 |------|------|------|
 | [总体架构设计](docs/01-architecture-design.md) | ✅ 已完成 | 5 层平面架构、模块设计、技术选型 |
-| [执行层详细设计](docs/02-execution-plane.md) | 🚧 待设计 | Agent Runtime、Tool Pipeline、Sandbox |
-| [安全架构设计](docs/03-security.md) | 🚧 待设计 | 纵深防御、权限模型、审批流 |
-| [集成层设计](docs/04-integration.md) | 🚧 待设计 | Git/CI/CD/MCP 集成方案 |
-| [Web UI 设计](docs/05-web-ui.md) | 🚧 待设计 | 页面布局、组件树、交互流 |
+| [执行层详细设计](docs/02-execution-plane.md) | ✅ 已完成 | Agent Runtime、Tool Pipeline、Sandbox、错误恢复 |
+| [安全架构设计](docs/03-security.md) | ✅ 已完成 | 纵深防御 6 层、权限模型 6 步、威胁模型、合规 |
+| [集成层设计](docs/04-integration.md) | ✅ 已完成 | Git/CI/CD/MCP 集成 + IDE Extension + CLI |
+| [Web UI 设计](docs/05-web-ui.md) | ✅ 已完成 | 页面布局、组件树、交互流、状态管理、具体代码 |
 
 ## 项目结构
 
