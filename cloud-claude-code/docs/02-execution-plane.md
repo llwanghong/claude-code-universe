@@ -19,6 +19,7 @@
 
 ### 2.1 query() Loop（继承 ch05）
 
+Agent 的核心是一个 async generator 函数。它维护一个 LoopState（messages、toolUseContext、turnCount、transition），在 while(true) 中循环执行：上下文压缩（4 层）→ 流式模型调用（带 Idle Watchdog 和 Withholding 模式）→ 工具检测与执行（14 步流水线）→ 状态重构 → 终端条件检查。返回 10 种 Terminal 状态（completed / user_abort / max_turns / blocking_limit / token_budget / stop_hook / error / approval_required 等）和 7 种 Continue 状态。完整实现见上方代码。
 
 ### 2.2 Context Manager（4 层压缩）
 
@@ -136,9 +137,11 @@ export async function* streamModel(
 
 ### 3.1 完整的 14 步流水线
 
+工具执行流水线直接继承 Claude Code ch06 的 checkPermissionsAndCallTool()。14 步依次为：工具查找 → 中止检查 → Zod 验证 → 语义验证 → 推测性安全检查 → Input Backfill → PreToolUse Hooks → 权限解析 → 权限拒绝处理 → 工具执行 → 结果预算 → PostToolUse Hooks → 新消息注入 → 错误分类。云端扩展：如果工具标记了 requiresApproval，在步骤 8 后插入审批流（创建 Jira ticket → 等待 TL 批准 → 继续执行）。沙箱工具通过 gVisor runsc 执行。完整实现见下方代码。
 
 ### 3.2 云端工具注册表
 
+云端工具集继承了 Claude Code 的内置工具并增加了企业工具。代码类：ReadTool / WriteTool / EditTool / GrepTool / GlobTool。Shell 类：BashTool（沙箱内执行，max 5min，命令分类器判定只读/写入/危险）。Git 类：GitTool（允许 status/diff/log/branch/checkout/add/commit/push，禁止 push --force 和 reset --hard）。企业类：BuildTool（触发 CI 构建）/ DeployTool（需审批，max 10min）/ DBTool（只读查询，max 100 行）/ TicketTool（Jira 工单）/ AgentTool（生成子 agent）。所有工具通过 buildTool() 工厂创建，继承 fail-closed 默认值（isConcurrencySafe=false, isReadOnly=false）。
 
 ### 3.3 并发执行（继承 ch07）
 
@@ -195,6 +198,7 @@ export async function* executeBatches(
 
 ### 4.1 沙箱层级
 
+Shell 沙箱采用三层嵌套隔离。最外层 K8s Agent Pod（独立网络命名空间 + Resource Limits）。中间层 gVisor (runsc) 用户态内核（拦截危险 syscall，提供与应用内核之间的安全边界）。最内层容器（只读根文件系统 + /workspace 唯一可写目录 + /tmp tmpfs + seccomp profile）。预装工具包括 git、node、python、ripgrep、fd。
 
 ### 4.2 命令分类器
 
@@ -278,6 +282,7 @@ export const SANDBOX_LIMITS = {
 
 ### 6.1 升级阶梯（继承 ch05）
 
+错误恢复采用分层升级策略。Prompt Too Long：先尝试 Context Collapse Drain → 失败则 Reactive Compact（仅一次）→ 仍失败则返回 terminal。Max Output Tokens：8K → 64K escalation → 多轮恢复（最多 3 次）。Model Unavailable：fallback 到备用模型。Network Error：指数退避重试（最多 3 次）。Sandbox Escape：不重试，立即终止并触发安全告警。所有重试机制都有 circuit breaker（连续 3 次失败打开断路器，60s 后半开尝试）。
 
 ### 6.2 Circuit Breaker（防止无限重试）
 

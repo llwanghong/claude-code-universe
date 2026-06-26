@@ -118,6 +118,7 @@ environments:
 
 ### 4.1 架构
 
+MCP Server Registry 是内部工具的发现和调用中心。架构包含三个组件：Registry API（POST /mcp/register 注册新 server、GET /mcp/servers 列出可用服务、POST /mcp/:name/call 调用工具）、Server Catalog（PostgreSQL 存储 server 元数据——名称、描述、owner、team、transport 类型、endpoint、认证配置、可见性范围）、Health Checker（每 30s ping 所有已注册 server，连续 3 次失败标记 unhealthy，恢复后自动标记 healthy）。
 
 ### 4.2 MCP Server 定义
 
@@ -213,6 +214,7 @@ const approvalNotification: Notification = {
 
 ### 6.1 VSCode Extension
 
+VSCode 扩展架构采用 Webview + Extension Host 模式。Extension Host 侧负责：Sidebar Provider（Webview 渲染聊天面板）、Inline Completion Provider（Agent 建议代码补全）、Status Bar Indicator（Agent 运行状态）。通过 Cloud Client（WebSocket + HTTP）与云端通信——WebSocket 接收 SSE 流式响应，HTTP POST 发送用户消息和指令。关键交互：右键文件 → "Ask Claude" 引用文件到对话、Agent 编辑后 inline diff 对比、一键 Accept/Reject 修改。
 
 ### 6.2 关键 API
 
@@ -267,6 +269,7 @@ export class VSCodeCloudClient {
 
 ### 7.1 Thin Client 设计
 
+CLI 客户端不运行 Agent Loop——所有执行在云端完成，CLI 仅负责：OAuth2 PKCE 认证（浏览器跳转完成 SSO 登录）、WebSocket 连接云端 Session、终端本地渲染流式 Markdown 输出。用户执行 cc "fix the auth bug" 时，CLI 将 prompt 和当前目录上下文发送到云端，云端执行 Agent Loop 并流式返回结果。CLI 通过 ~/.claude-cloud/config.yaml 配置 endpoint、认证方式、默认模型等。
 
 ### 7.2 配置
 

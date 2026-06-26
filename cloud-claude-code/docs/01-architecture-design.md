@@ -52,6 +52,7 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 
 ### 3.2 Web 应用核心布局
 
+Web 应用是三种交互形态中最完整的一种。左侧为可折叠文件树，展示仓库结构并支持点击 @mention 引用文件到对话。右侧主区域从上到下依次为：流式对话视图（实时渲染 Markdown + 代码 Diff）、权限确认弹窗（出现于危险操作时）、以及 Prompt 输入框（支持 @file 自动补全和 / 命令面板）。会话支持多 Tab 并行切换。
 
 关键功能：
 - **文件树**：浏览仓库结构，点击 @mention 直接引用文件到对话
@@ -66,6 +67,7 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 
 ### 4.1 Auth Service（认证服务）
 
+认证是整个平台的安全入口。所有用户通过企业 SSO（Okta/Azure AD/LDAP）登录，Auth Service 校验身份后签发 JWT（access token 15min + refresh token 8h）。JWT claims 中包含 userId、teamId、role 和 projects 列表，下游所有服务通过 JWT 完成无状态鉴权。RBAC 定义了四种角色：Admin（平台管理）、TeamLead（团队管理 + 审批）、Developer（日常开发）、Viewer（只读访问）。
 
 JWT claims 包含：
 ```json
@@ -81,6 +83,7 @@ JWT claims 包含：
 
 ### 4.2 Session Manager（会话管理）
 
+每个用户对话对应一个 Session。Session Manager 维护一个状态机：Idle → Active → Compacting → Completed。核心能力包括：(1) 会话持久化到 Object Storage（对话历史 JSONL 格式，继承 ch08 sidechain 转录模式）；(2) 热状态存 Redis（TTL 24h），支持毫秒级会话恢复；(3) 多会话并行（同一用户可在不同 Tab 中处理不同项目）；(4) 会话共享（团队成员可加入同一会话进行协作）。
 
 **持久化策略**：
 - 对话历史 → Object Storage（JSONL 格式，继承 ch08 sidechain 转录）
@@ -89,9 +92,11 @@ JWT claims 包含：
 
 ### 4.3 Agent Orchestrator（Agent 编排器）
 
+编排器负责将用户请求转化为 Agent 执行计划。进入时先由小模型做意图识别——单步任务直接由主 Agent 执行，多步复杂任务进入 Coordinator 模式。Coordinator 将任务分解为 Research → Synthesis → Implementation → Verification 四个阶段，每个阶段可并行生成多个 Worker Agent。Worker Pool 受项目配额限制（最大并发数），每个 Worker 有独立生命周期（create → execute → cleanup），超时 10min 自动终止。
 
 ### 4.4 Model Router（模型路由器）
 
+模型路由根据项目安全级别自动选择推理后端。public 和 internal 项目走外部 API（Anthropic/OpenAI，能力最强但数据需脱敏后发送）；restricted 项目走私有化部署模型（DeepSeek/LLaMA on GPU Node Pool，数据不出集群）。所有请求经过统一的 Prompt 增强层：注入公司编码规范、安全策略和项目上下文。外部 API 不可用时自动 fallback 到私有模型。
 
 路由规则：
 - `public` → 外部 API（开源项目，无敏感数据）
@@ -101,6 +106,7 @@ JWT claims 包含：
 
 ### 4.5 Permission Engine（权限引擎）
 
+权限引擎继承 Claude Code 的 7 种模式（default / acceptEdits / plan / dontAsk / bypassPermissions / auto / bubble），并增加了企业维度。权限决策链为 6 步：Hook 决策 → 规则匹配（平台级 > 团队级 > 项目级） → 工具特定检查 → 模式默认值 → 交互式提示 → 审批流。
 继承 Claude Code ch06 的 7 种权限模式，增加企业维度：
 
 
@@ -112,6 +118,7 @@ JWT claims 包含：
 
 ### 5.1 Agent Runtime 容器设计
 
+每个用户会话对应一个独立的 K8s Pod，Pod 内部运行完整的 Agent 环境：query() Loop（async generator，继承 ch05）、Tool Pipeline（14 步执行流水线，继承 ch06）、Context Manager（4 层压缩 + circuit breaker）。Pod 内挂载 CoW workspace 卷（仓库代码）和 gVisor 沙箱（Shell 执行）。这样做而非共享进程的原因：安全隔离（一个 session 的 shell 命令不影响其他）、资源独立（CPU/内存限额按 Pod）、故障隔离（一个 Pod crash 不影响其他用户）、可观测（每个 Pod 独立日志/metrics）。代价是冷启动 2-5s，通过 Warm Pool 预热缓解。
 
 **关键设计决策**：每会话一个 Pod，不是共享进程。理由：
 - 安全隔离：一个会话的 shell 命令不会影响另一个
@@ -123,6 +130,7 @@ JWT claims 包含：
 
 ### 5.2 Repository Workspace 管理
 
+代码仓库采用分层缓存架构：底层是 Repo Cache（bare repos on SSD），上层每个 Agent Pod 通过 git clone --shared --reference 快速创建 CoW overlay workspace。这意味着：(1) 同项目多个 Agent session 共享底层 bare repo，不重复 clone；(2) CoW overlay 保证各 Agent 的修改互不影响；(3) Agent 所有修改在临时分支上（agent-{uuid}），不污染主分支；(4) Session 结束后 TTL 自动清理（默认 24h）。
 
 ### 5.3 工具系统
 
@@ -245,6 +253,7 @@ interface BuildService {
 
 ### 8.1 纵深防御 6 层
 
+安全架构采用 6 层纵深防御：Layer 1 (Network) — K8s NetworkPolicy 最小权限 + Ingress 仅 Gateway 暴露 + Egress 白名单 + mTLS。Layer 2 (Auth) — SSO/OIDC + MFA + JWT + Service Account + API Key。Layer 3 (Authorization) — RBAC 四角色 + Project ACL + Tool Permission（7 modes）。Layer 4 (Isolation) — 独立 Pod + gVisor 沙箱 + CoW workspace + Seccomp 禁用危险 syscall。Layer 5 (Data) — Vault 密钥管理 + Encryption at rest + PII 脱敏 + 每 Session 独立临时 Token。Layer 6 (Audit) — ClickHouse 不可变审计日志 + 告警规则（权限异常、沙箱逃逸、非工作时间 restricted 访问）。
 
 ---
 
@@ -252,6 +261,7 @@ interface BuildService {
 
 ### 9.1 K8s 集群布局
 
+K8s 集群包含四个 Node Pool：Control Plane Pool（API Gateway、Auth、Session、Orchestrator 等服务，Deployment x3 保证高可用）、Agent Pool（弹性伸缩，每 session 一个 Pod，gVisor 沙箱 + Workspace Volume）、GPU Pool（vLLM/TGI 推理服务，运行 DeepSeek/LLaMA 等私有模型，独立伸缩策略）、Data Pool（PostgreSQL、Redis Cluster、MinIO/S3、Milvus/Qdrant）。伸缩策略：最小 Warm Pool 5 pods（热启动 <1s）、最大按团队配额（默认 20/team）、空闲 10min 自动销毁。
 
 ---
 
@@ -279,9 +289,11 @@ interface BuildService {
 
 ### Phase 1：核心可用（2-3 个月）
 
+交付目标：单用户可登录 Web，选择 Git 仓库，与 Agent 对话。包含：API Gateway + SSO Auth、单 Agent Runtime（query loop + 基础工具集 Read/Write/Edit/Grep/Bash）、Git 集成（clone + workspace）、Web 基础对话界面、外部 API 接入（Anthropic）。
 
 ### Phase 2：生产就绪（2-3 个月）
 
+交付目标：多用户可用，安全控制完备，IDE 插件可用。包含：Agent Orchestrator（多 Agent + Coordinator 模式）、Shell Sandbox 升级（gVisor/Firecracker）、权限系统完整版（7 模式 + 审批流）、Memory 系统（4 层，继承 ch11）、私有模型接入（GPU Node Pool + vLLM）、IDE Extensions（VSCode + JetBrains）、可观测性（Prometheus + Jaeger + ClickHouse）。
 
 ---
 

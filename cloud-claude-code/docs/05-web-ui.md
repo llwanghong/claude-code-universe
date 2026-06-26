@@ -85,6 +85,7 @@
 
 ### 4.2 权限确认
 
+用户发送消息后，Agent 执行到需要权限的工具调用时，前端收到 permission_request SSE 事件并弹出 PermissionDialog。对话框展示：工具名称、具体命令、风险评估（高/中/低）。用户可选择 Allow Once（本次放行）/ Always Allow + 规则模式（如 Bash(git *) 永久放行）/ Deny（拒绝）。选择后发送 permission_response，Agent 继续或跳过该工具。规则持久化到项目 .claude/rules.yaml，后续自动匹配。
 
 ## 5. 技术选型
 

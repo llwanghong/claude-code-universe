@@ -26,6 +26,7 @@
 
 ### 3.1 权限决策流程
 
+权限决策链包含 6 个步骤，按优先级依次执行。步骤 1 (Hook Decision)：PreToolUse Hook 最先运行，可以 allow / deny / modify-input / inject-context，来源包括平台策略、团队配置和项目配置。步骤 2 (Rule Matching)：三层规则按平台级 > 团队级 > 项目级优先级匹配，alwaysDeny 直接阻止（如 Bash(rm -rf *)），alwaysAllow 直接放行（如 Bash(git *)）。步骤 3 (Tool-Specific Check)：工具的 checkPermissions() 方法——DBTool 检查是否 SELECT 语句，DeployTool 检查目标环境。步骤 4 (Mode Default)：7 种权限模式的默认行为。步骤 5 (Interactive Prompt)：Web/IDE/CLI 三种形态的权限对话框。步骤 6 (Approval Flow)：高风险操作自动创建 Jira/飞书审批 ticket。
 
 ### 3.2 规则配置示例
 
