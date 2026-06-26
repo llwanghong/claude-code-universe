@@ -4,27 +4,6 @@
 
 ## 1. 集成架构总览
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                    Integration Plane                      │
-│                                                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐   │
-│  │   Git    │  │   CI/CD  │  │   MCP Registry       │   │
-│  │ Service  │  │ Service  │  │                       │   │
-│  │          │  │          │  │  mysql-mcp  redis-mcp │   │
-│  │ GitLab   │  │ Jenkins  │  │  k8s-mcp    jira-mcp  │   │
-│  │ Bitbucket│  │ GitLab CI│  │  sentry-mcp grafana-  │   │
-│  │ GitHub   │  │          │  │  mcp         custom-* │   │
-│  └────┬─────┘  └────┬─────┘  └──────────┬───────────┘   │
-│       │             │                   │                │
-│       └─────────────┼───────────────────┘                │
-│                     │                                    │
-│            ┌────────▼────────┐                          │
-│            │  Agent Runtime  │                          │
-│            │  (Tool Pipeline)│                          │
-│            └─────────────────┘                          │
-└──────────────────────────────────────────────────────────┘
-```
 
 ---
 
@@ -32,60 +11,6 @@
 
 ### 2.1 抽象层设计
 
-```typescript
-// server/src/integration/git/types.ts
-
-export interface GitService {
-  // ── 仓库操作 ──
-  clone(url: string, options: CloneOptions): Promise<Workspace>
-  fetch(workspace: Workspace): Promise<FetchResult>
-  checkout(workspace: Workspace, ref: string): Promise<void>
-
-  // ── 分支操作 ──
-  createBranch(workspace: Workspace, name: string, base?: string): Promise<void>
-  deleteBranch(workspace: Workspace, name: string): Promise<void>
-  listBranches(workspace: Workspace): Promise<Branch[]>
-
-  // ── 变更操作 ──
-  status(workspace: Workspace): Promise<GitStatus>
-  diff(workspace: Workspace, options?: DiffOptions): Promise<DiffResult>
-  add(workspace: Workspace, paths: string[]): Promise<void>
-  commit(workspace: Workspace, message: string): Promise<Commit>
-  push(workspace: Workspace, remote?: string): Promise<void>
-
-  // ── PR/MR 操作 ──
-  createPR(workspace: Workspace, params: PRParams): Promise<PullRequest>
-  getPR(id: string): Promise<PullRequest>
-  listPRs(filter: PRFilter): Promise<PullRequest[]>
-  addPRComment(prId: string, comment: string): Promise<void>
-  mergePR(prId: string, method?: 'merge' | 'squash' | 'rebase'): Promise<void>
-
-  // ── 搜索 ──
-  searchCode(query: string, options?: SearchOptions): Promise<SearchResult[]>
-  getFileHistory(path: string): Promise<FileHistory>
-
-  // ── Webhook ──
-  registerWebhook(project: string, events: WebhookEvent[]): Promise<Webhook>
-  handleWebhook(payload: unknown): Promise<WebhookEvent>
-}
-
-export interface CloneOptions {
-  ref?: string              // 分支/tag/commit
-  depth?: number            // shallow clone depth
-  shared?: boolean          // 使用 --shared（从 bare cache）
-  sparse?: string[]         // sparse checkout 路径
-}
-
-export interface PRParams {
-  title: string
-  body: string
-  sourceBranch: string
-  targetBranch: string
-  reviewers?: string[]
-  labels?: string[]
-  draft?: boolean
-}
-```
 
 ### 2.2 多平台适配
 
@@ -154,72 +79,9 @@ Agent: "I'll fix the auth bug"
 
 ### 3.1 抽象层
 
-```typescript
-// server/src/integration/cicd/types.ts
-
-export interface BuildService {
-  // ── 构建操作 ──
-  triggerBuild(params: BuildParams): Promise<Build>
-  getBuild(buildId: string): Promise<Build>
-  getBuildLog(buildId: string): AsyncGenerator<string>
-  cancelBuild(buildId: string): Promise<void>
-  listBuilds(filter: BuildFilter): Promise<Build[]>
-
-  // ── 部署操作 ──
-  triggerDeploy(params: DeployParams): Promise<Deployment>
-  getDeploy(deployId: string): Promise<Deployment>
-  getDeployLog(deployId: string): AsyncGenerator<string>
-  rollbackDeploy(env: string, version: string): Promise<Deployment>
-  listDeployments(env: string): Promise<Deployment[]>
-
-  // ── 环境操作 ──
-  getEnvironment(env: string): Promise<Environment>
-  listEnvironments(): Promise<Environment[]>
-  getEnvironmentVariables(env: string): Promise<Record<string, string>>
-}
-
-export interface DeployParams {
-  environment: 'staging' | 'canary' | 'production'
-  version: string
-  artifact?: string           // Docker image tag, etc.
-  dryRun?: boolean
-  requireApproval?: boolean
-}
-
-export interface BuildParams {
-  project: string
-  branch: string
-  commit: string
-  triggeredBy: 'agent' | 'manual' | 'webhook'
-  variables?: Record<string, string>
-}
-```
 
 ### 3.2 Agent 视角的构建/部署流
 
-```
-Agent: "The changes look good. Let me verify and deploy."
-
-  Build:
-  1. Agent triggers: BuildTool({ project: 'myapp', branch: 'agent-fix-auth' })
-  2. Build starts — agent streams build log in real-time
-  3. Build passes ✅ — agent reports: "Build successful (2m 34s)"
-
-  Deploy (staging):
-  4. Agent triggers: DeployTool({ env: 'staging', version: 'abc123' })
-  5. Deploy starts — agent monitors deploy log
-  6. Deploy succeeds ✅ — agent reports: "Deployed to staging"
-
-  Deploy (production):
-  7. Agent triggers: DeployTool({ env: 'production', version: 'abc123' })
-  8. ┌─ Approval Required ─────────────────────────┐
-     │ "Agent wants to deploy to production"        │
-     │ Version: abc123                              │
-     │ Changes: fix null check in auth flow         │
-     │ [Approve] [Reject]                           │
-     └──────────────────────────────────────────────┘
-  9. Team Lead approves → deploy proceeds
-```
 
 ### 3.3 部署安全策略
 
@@ -259,35 +121,6 @@ environments:
 
 ### 4.1 架构
 
-```
-┌─────────────────────────────────────────────────────┐
-│            MCP Server Registry                       │
-│                                                      │
-│  ┌──────────────────────────────────────────────┐   │
-│  │  Registry API                                 │   │
-│  │  POST   /mcp/register    — 注册新 server      │   │
-│  │  DELETE /mcp/:name       — 注销 server        │   │
-│  │  GET    /mcp/servers     — 列出可用 servers   │   │
-│  │  GET    /mcp/:name/tools — 列出 server 工具   │   │
-│  │  POST   /mcp/:name/call  — 调用工具           │   │
-│  └──────────────────────────────────────────────┘   │
-│                                                      │
-│  ┌──────────────────────────────────────────────┐   │
-│  │  Server Catalog (PostgreSQL)                  │   │
-│  │  - name, description, owner, team             │   │
-│  │  - transport type, endpoint, auth config      │   │
-│  │  - visibility (global / team / project)       │   │
-│  │  - health status, last check timestamp        │   │
-│  └──────────────────────────────────────────────┘   │
-│                                                      │
-│  ┌──────────────────────────────────────────────┐   │
-│  │  Health Checker                                │   │
-│  │  - 每 30s ping 所有注册的 servers             │   │
-│  │  - 连续 3 次失败 → 标记 unhealthy             │   │
-│  │  - 恢复后自动标记 healthy                     │   │
-│  └──────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────┘
-```
 
 ### 4.2 MCP Server 定义
 
@@ -341,18 +174,6 @@ const jiraMcp: MCPServerDefinition = {
 
 ### 4.3 工具可见性矩阵
 
-```
-                     Global    Team A   Team B   Project X
-  ──────────────────────────────────────────────────────
-  jira-mcp             ✅        ✅       ✅       ✅
-  confluence-mcp       ✅        ✅       ✅       ✅
-  mysql-mcp (prod)     ❌        ✅       ❌       ❌
-  redis-mcp (cache)    ❌        ✅       ✅       ❌
-  k8s-mcp              ❌        ✅       ❌       ❌
-  sentry-mcp           ✅        ✅       ✅       ✅
-  grafana-mcp          ✅        ✅       ✅       ❌
-  custom-slack-bot     ❌        ❌       ✅       ❌
-```
 
 ---
 
@@ -398,35 +219,6 @@ const approvalNotification: Notification = {
 
 ### 6.1 VSCode Extension
 
-```
-┌──────────────────────────────────────────────────────┐
-│  VSCode Extension Architecture                        │
-│                                                       │
-│  ┌────────────────────────────────────────────────┐  │
-│  │  Extension Host                                  │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │  │
-│  │  │ Sidebar  │  │ Inline   │  │ Status Bar   │  │  │
-│  │  │ Provider │  │ Completion│  │ Indicator    │  │  │
-│  │  │ (Webview)│  │ Provider │  │              │  │  │
-│  │  └──────────┘  └──────────┘  └──────────────┘  │  │
-│  │  ┌──────────────────────────────────────────┐   │  │
-│  │  │  Cloud Client (WebSocket + HTTP)         │   │  │
-│  │  │  - auth: OAuth2 PKCE                     │   │  │
-│  │  │  - stream: SSE events                    │   │  │
-│  │  │  - commands: HTTP POST                   │   │  │
-│  │  └──────────────────────────────────────────┘   │  │
-│  └────────────────────────────────────────────────┘  │
-│                           │                           │
-│                    Cloud API                          │
-└──────────────────────────────────────────────────────┘
-
-功能：
-  - 侧边栏 Chat 面板（替代终端）
-  - 内联代码补全（agent 建议代码修改）
-  - Diff 对比（agent 修改 vs 当前代码）
-  - @file 引用（右键文件 → "Ask Claude"）
-  - 状态栏指示器（agent 是否在运行）
-```
 
 ### 6.2 关键 API
 
@@ -481,33 +273,6 @@ export class VSCodeCloudClient {
 
 ### 7.1 Thin Client 设计
 
-```
-┌──────────────────────────────────────┐
-│          CLI Client (本地)            │
-│                                       │
-│  $ cc "fix the auth bug"             │
-│       │                               │
-│       ▼                               │
-│  ┌──────────┐                        │
-│  │ Auth     │ → OAuth2 PKCE 浏览器   │
-│  └──────────┘                        │
-│       │                               │
-│       ▼                               │
-│  ┌──────────┐                        │
-│  │ WebSocket│ → 云端 session         │
-│  │ Client   │ ← 流式响应              │
-│  └──────────┘                        │
-│       │                               │
-│       ▼                               │
-│  ┌──────────┐                        │
-│  │ Terminal │ → 本地终端渲染          │
-│  │ Output   │   流式 markdown         │
-│  └──────────┘                        │
-└──────────────────────────────────────┘
-
-CLI 不运行 agent loop — 只是转发请求和渲染输出。
-所有执行都在云端。
-```
 
 ### 7.2 配置
 

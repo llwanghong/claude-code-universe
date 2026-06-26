@@ -30,62 +30,11 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 
 ## 2. 总体架构：五层平面
 
-```mermaid
-graph TD
-    Web["🌐 Web App (React)"] --> Gateway
-    VSCode["💻 VS Code Extension"] --> Gateway
-    JetBrains["💻 JetBrains Plugin"] --> Gateway
-    CLI["⌨️ CLI Client"] --> Gateway
-    Gateway["🔐 API Gateway<br/>auth / route / rate-limit"]
-
-    Gateway --> Auth["Auth Service<br/>(SSO/OIDC)"]
-    Gateway --> Session["Session Manager<br/>(state machine)"]
-    Gateway --> Orch["Agent Orchestrator<br/>(coordinator pattern)"]
-    Gateway --> Config["Config Service<br/>(projects/settings)"]
-
-    Auth --> Session
-    Session --> Orch
-
-    Orch --> Router["Model Router<br/>public→external / restricted→private"]
-    Orch --> Perm["Permission Engine<br/>7 modes + approval flow"]
-    Config --> Session
-
-    Orch --> Pod["⚙️ Agent Pod (per session)"]
-    Pod --> Loop["query() Loop<br/>(ch05 generator)"]
-    Pod --> ToolPipe["Tool Pipeline<br/>(ch06 14-step)"]
-    Pod --> CtxMgr["Context Manager<br/>(4-layer compaction)"]
-    Pod --> RepoWS["Repo Workspace<br/>(CoW overlay)"]
-    Pod --> Sandbox["Shell Sandbox<br/>(gVisor)"]
-    Pod --> MCPBridge["MCP Bridge<br/>(internal tools)"]
-
-    Loop --> DataLayer
-    ToolPipe --> DataLayer
-
-    RepoSvc["Repo Service<br/>(GitLab/Bitbucket)"] --- Pod
-    BuildSvc["Build/CI Service<br/>(Jenkins/GitLab CI)"] --- Pod
-    MCPReg["MCP Server Registry"] --- Pod
-
-    DataLayer["💾 DATA PLANE"] --> S3["Object Storage<br/>(S3/MinIO)"]
-    DataLayer --> Redis["Redis Cache"]
-    DataLayer --> Vector["Vector Store<br/>(Milvus/Qdrant)"]
-    DataLayer --> PG["PostgreSQL<br/>(users/permissions)"]
-
-    style Gateway fill:#e3f2fd,stroke:#1976d2
-    style Pod fill:#e8f5e9,stroke:#388e3c
-    style DataLayer fill:#f3e5f5,stroke:#7b1fa2
-```
 
 ### 层间数据流
 
 ### 层间数据流
 
-```
-用户请求 → Access (认证/路由) → Control (调度/决策) → Execution (agent 运行)
-                                                              ↓
-                                   Data (持久化) ←────────────┘
-                                                              ↓
-用户 ← Access (流式响应) ← Control (聚合) ← Execution (输出) ─┘
-```
 
 **关键设计**：每层只与相邻层通信，不跨层调用。Access 不知道 Agent Pod 的存在，Data 不知道用户是谁。
 
@@ -107,27 +56,6 @@ graph TD
 
 ### 3.2 Web 应用核心布局
 
-```mermaid
-graph TD
-    Header["Header: Project Selector | Session Tabs | Settings | User"]
-    Sidebar["Sidebar: File Tree + Agent Status + Memory"]
-    Main["Main Content"]
-    ConvView["Conversation View: Streaming Markdown + Code Diff"]
-    PermDialog["Permission Dialog: Allow / Deny / Always Allow"]
-    PromptInput["Prompt Input: @mentions / /commands / Attach / Send"]
-
-    Header --> Sidebar
-    Header --> Main
-    Sidebar -.-> Main
-    Main --> ConvView
-    Main --> PermDialog
-    Main --> PromptInput
-    ConvView -.-> PermDialog
-
-    style Header fill:#e3f2fd,stroke:#1976d2
-    style Sidebar fill:#fff3e0,stroke:#f57c00
-    style Main fill:#e8f5e9,stroke:#388e3c
-```
 
 关键功能：
 - **文件树**：浏览仓库结构，点击 @mention 直接引用文件到对话
@@ -138,23 +66,6 @@ graph TD
 
 ### 3.3 API Gateway
 
-```
-                    ┌──────────────────┐
-WebSocket/SSE ─────▶│                  │
-HTTP POST     ─────▶│   API Gateway    │
-                     │                  │
-                     │ - JWT 验证       │
-                     │ - OAuth2 Token   │
-                     │ - Session 亲和   │
-                     │ - 限流 (QPS/user)│
-                     │ - 审计日志记录   │
-                     │ - 请求路由       │
-                     └────────┬─────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        Control Plane    Execution       Data Plane
-```
 
 ---
 
@@ -162,24 +73,6 @@ HTTP POST     ─────▶│   API Gateway    │
 
 ### 4.1 Auth Service（认证服务）
 
-```
-┌──────────┐     ┌─────────────────┐     ┌─────────────┐
-│  SSO/    │────▶│  Auth Service   │────▶│  Session    │
-│  OIDC    │     │                 │     │  Manager    │
-│  (Okta/  │     │ ┌─────────────┐ │     └─────────────┘
-│   LDAP)  │     │ │ JWT Issue   │ │
-└──────────┘     │ │ (access+ref │ │
-                 │ │  resh)      │ │
-                 │ └─────────────┘ │
-                 │ ┌─────────────┐ │
-                 │ │ RBAC Resolve│ │
-                 │ │ - Admin     │ │
-                 │ │ - TeamLead  │ │
-                 │ │ - Developer │ │
-                 │ │ - Viewer    │ │
-                 │ └─────────────┘ │
-                 └─────────────────┘
-```
 
 JWT claims 包含：
 ```json
@@ -195,29 +88,6 @@ JWT claims 包含：
 
 ### 4.2 Session Manager（会话管理）
 
-```
-Session 状态机：
-
-     ┌──────────┐
-     │   Idle   │ ← 用户打开但未发送消息
-     └────┬─────┘
-          │ 用户发送消息
-          ▼
-     ┌──────────┐
-     │  Active  │ ← Agent 正在运行
-     └────┬─────┘
-          │
-    ┌─────┴─────┐
-    ▼           ▼
-┌────────┐ ┌──────────┐
-│Paused  │ │Compacting│ ← 上下文压缩中
-└───┬────┘ └────┬─────┘
-    │           │ 压缩完成
-    ▼           ▼
-┌────────┐ ┌──────────┐
-│Resumed │ │Completed │
-└────────┘ └──────────┘
-```
 
 **持久化策略**：
 - 对话历史 → Object Storage（JSONL 格式，继承 ch08 sidechain 转录）
@@ -226,63 +96,9 @@ Session 状态机：
 
 ### 4.3 Agent Orchestrator（Agent 编排器）
 
-```
-用户请求进来
-     │
-     ▼
-┌─────────────┐
-│ 意图识别     │ ← 小模型判断：单步任务？多步任务？
-│ (Haiku/小模  │
-│  型快分类)   │
-└──────┬──────┘
-       │
-  ┌────┴────┐
-  ▼         ▼
-单 Agent   多 Agent
-直接执行   Coordinator 模式
-           │
-     ┌─────┴─────┐
-     ▼           ▼
-  Worker 1    Worker 2  ...
-  (Pod)       (Pod)
-     │           │
-     └─────┬─────┘
-           ▼
-      Coordinator 汇总结果
-
-Worker Pool 管理：
-- 最大并发：按项目配额限制
-- 生命周期：create → active → done → cleanup
-- 资源回收：Agent Pod 销毁 + Workspace Volume 清理
-- 超时保护：单 Worker 最长执行 10min
-```
 
 ### 4.4 Model Router（模型路由器）
 
-```
-请求 → 检查 project.securityLevel
-         │
-    ┌────┴────┐
-    ▼         ▼
-public/internal   restricted
-    │               │
-    ▼               ▼
-┌────────────┐  ┌──────────┐
-│ 外部 API   │  │ 私有模型  │
-│ Anthropic  │  │ DeepSeek  │
-│ (能力最强) │  │ /LLaMA    │
-│            │  │ (GPU 推理)│
-└─────┬──────┘  └─────┬─────┘
-      │               │
-      └───────┬───────┘
-              ▼
-    ┌─────────────────┐
-    │ Prompt 增强层    │ ← 所有请求都经过
-    │ - 公司编码规范   │
-    │ - 安全策略注入   │
-    │ - 项目上下文     │
-    └─────────────────┘
-```
 
 路由规则：
 - `public` → 外部 API（开源项目，无敏感数据）
@@ -294,30 +110,6 @@ public/internal   restricted
 
 继承 Claude Code ch06 的 7 种权限模式，增加企业维度：
 
-```
-权限决策链：
-                              拒绝
-1. PreToolUse Hook ────────────────────▶ 阻止执行
-       │ 通过
-       ▼
-2. 规则匹配（三层规则）
-   ├─ 平台级 (安全团队强制)── alwaysDeny → 阻止执行
-   ├─ 团队级 (组织统一配置)
-   └─ 项目级 (.claude/rules.yaml)
-       │ 通过
-       ▼
-3. 工具特定检查 (checkPermissions)
-       │ 通过
-       ▼
-4. 模式默认值 (7 modes: default/acceptEdits/plan/
-   dontAsk/bypassPermissions/auto/bubble)
-       │ 需要用户确认
-       ▼
-5. 交互式提示 (Web/IDE 对话框)
-       │ 需要审批
-       ▼
-6. 审批流 (Jira/飞书审批 → TL批准 → 执行)
-```
 
 **审批流**：对 `DeployTool`、`DBTool(write)`、`K8sTool` 等高风险操作，自动创建审批 ticket。
 
@@ -327,44 +119,6 @@ public/internal   restricted
 
 ### 5.1 Agent Runtime 容器设计
 
-```
-┌──────────────────────────────────────────┐
-│        Agent Pod: agent-{uuid}            │
-│                                           │
-│  ┌────────────────────────────────────┐  │
-│  │  query() Loop (继承 ch05)          │  │
-│  │  async function* query(params) {   │  │
-│  │    let state = initState(params)   │  │
-│  │    while (true) {                  │  │
-│  │      // 4-layer context compaction │  │
-│  │      // Model streaming            │  │
-│  │      // Tool execution             │  │
-│  │      // Check terminal states      │  │
-│  │    }                               │  │
-│  │  }                                 │  │
-│  └────────────────────────────────────┘  │
-│  ┌────────────────────────────────────┐  │
-│  │  Tool Pipeline (继承 ch06)         │  │
-│  │  14 steps: Lookup → Validate →     │  │
-│  │  Permissions → Execute → Budget    │  │
-│  └────────────────────────────────────┘  │
-│  ┌────────────────────────────────────┐  │
-│  │  Context Manager (继承 ch05)       │  │
-│  │  Layer 0: ToolResultBudget         │  │
-│  │  Layer 1: SnipCompact              │  │
-│  │  Layer 2: Microcompact             │  │
-│  │  Layer 3: ContextCollapse          │  │
-│  │  Layer 4: AutoCompact (circuit)    │  │
-│  └────────────────────────────────────┘  │
-│                                           │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │ Repo     │ │ Shell    │ │ MCP      │  │
-│  │ Workspace│ │ Sandbox  │ │ Bridge   │  │
-│  │(CoW      │ │(gVisor/  │ │(internal │  │
-│  │overlay)  │ │Firecrack)│ │tools)    │  │
-│  └──────────┘ └──────────┘ └──────────┘  │
-└──────────────────────────────────────────┘
-```
 
 **关键设计决策**：每会话一个 Pod，不是共享进程。理由：
 - 安全隔离：一个会话的 shell 命令不会影响另一个
@@ -376,25 +130,6 @@ public/internal   restricted
 
 ### 5.2 Repository Workspace 管理
 
-```
-              ┌──────────────────┐
-              │   Repo Cache      │ ← bare repos on SSD
-              │   /data/repos/    │
-              │   myapp.git       │
-              │   platform.git    │
-              └────────┬─────────┘
-                       │ git clone --shared --reference
-          ┌────────────┼────────────────┐
-          ▼            ▼                ▼
-    ┌──────────┐ ┌──────────┐    ┌──────────┐
-    │ Agent 1  │ │ Agent 2  │    │ Agent 3  │
-    │ Workspace│ │ Workspace│    │ Workspace│
-    │ /ws/uuid/│ │ /ws/uuid/│    │ /ws/uuid/│
-    │          │ │          │    │          │
-    │ 使用 CoW │ │ 使用 CoW │    │ 使用 CoW │
-    │ overlayfs│ │ overlayfs│    │ overlayfs│
-    └──────────┘ └──────────┘    └──────────┘
-```
 
 ### 5.3 工具系统
 
@@ -480,23 +215,6 @@ sessionTimeout: 3600 # 会话最长 1h
 
 ### 6.2 代码智能 RAG
 
-```
-Git Push → Webhook → 代码索引器
-                       │
-                       ├─ tree-sitter AST 解析
-                       ├─ 符号提取（函数/类/接口）
-                       ├─ 依赖图构建
-                       └─ Embedding 生成（BGE/CodeBERT）
-                            │
-                            ▼
-                       Vector Store
-                            │
-Agent 查询时：              │
-  1. 关键词搜索（ch17 位图预过滤器，4 字节/文件）
-  2. 语义搜索（Vector Store，找到"认证相关代码"）
-  3. AST 上下文（依赖图，理解调用链）
-  4. 结果融合 → 注入 agent context
-```
 
 ---
 
@@ -533,29 +251,6 @@ interface BuildService {
 
 ### 7.3 MCP 内部工具注册中心
 
-```
-┌─────────────────────────────────────────┐
-│        MCP Server Registry               │
-│                                          │
-│  已注册的内部 MCP 服务：                  │
-│  ┌──────────────────────────────────┐   │
-│  │ mysql-mcp      → 数据库查询(只读) │   │
-│  │ redis-mcp      → 缓存操作        │   │
-│  │ k8s-mcp        → K8s 操作(审批)  │   │
-│  │ jira-mcp       → Ticket 管理     │   │
-│  │ confluence-mcp → 文档搜索        │   │
-│  │ sentry-mcp     → 错误追踪        │   │
-│  │ grafana-mcp    → 监控查询        │   │
-│  │ custom-*       → 团队自定义      │   │
-│  └──────────────────────────────────┘   │
-│                                          │
-│  安全模型（继承 ch15）：                  │
-│  - stdio/http/sse transport             │
-│  - OAuth/PKC E 认证                     │
-│  - 按团队/项目的工具可见性               │
-│  - 工具级限流                            │
-└─────────────────────────────────────────┘
-```
 
 ---
 
@@ -563,64 +258,9 @@ interface BuildService {
 
 ### 8.1 纵深防御 6 层
 
-```
-Layer 1: Network
-  ├─ K8s NetworkPolicy — Pod 间最小权限通信
-  ├─ Ingress — 仅 API Gateway 对外暴露
-  └─ Egress — 白名单：内网服务 + 外部 API 域名
-
-Layer 2: Authentication
-  ├─ SSO/OIDC + MFA
-  ├─ Service Account（服务间通信）
-  └─ API Key（CI/CD 集成）
-
-Layer 3: Authorization
-  ├─ RBAC：Admin / TeamLead / Developer / Viewer
-  ├─ Project-level ACL
-  └─ Tool-level permission
-
-Layer 4: Isolation
-  ├─ Agent Pod 独立容器
-  ├─ gVisor/Firecracker 沙箱
-  ├─ CoW workspace overlay
-  └─ 临时分支（不污染主分支）
-
-Layer 5: Data
-  ├─ Vault/SealedSecrets — 密钥管理
-  ├─ Encryption at rest — 所有存储加密
-  └─ PII 脱敏 — 审计日志中脱敏
-
-Layer 6: Audit
-  ├─ 所有 API 调用 → ClickHouse
-  ├─ 所有工具执行 → Object Storage
-  └─ 所有模型调用 → 成本追踪
-```
 
 ### 8.2 数据流向与安全边界
 
-```
-                      ┌──────────────┐
-                      │  外部 LLM API │  ← 仅 public/internal 项目
-                      │  (Anthropic)  │    数据经脱敏后发送
-                      └──────┬───────┘
-                             │
-┌──────────┐    ┌─────────────▼──────────────┐
-│ 用户      │    │        API Gateway         │
-│ (Browser/ ├───▶│    (auth + audit + route)  │
-│  IDE/CLI) │    └─────────────┬──────────────┘
-└──────────┘                   │
-                    ┌──────────▼──────────┐
-                    │   Agent Runtime     │
-                    │   ┌──────────────┐  │
-                    │   │ 私有模型 (GPU)│  │ ← restricted 项目
-                    │   │ 数据不出集群  │  │
-                    │   └──────────────┘  │
-                    │   ┌──────────────┐  │
-                    │   │ 代码仓库      │  │ ← 内网
-                    │   │ CI/CD 系统    │  │
-                    │   └──────────────┘  │
-                    └─────────────────────┘
-```
 
 ---
 
@@ -628,65 +268,9 @@ Layer 6: Audit
 
 ### 9.1 K8s 集群布局
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  K8s Cluster                         │
-│                                                      │
-│  ┌──────────────────┐  ┌──────────────────┐         │
-│  │ Control Plane    │  │ GPU Node Pool    │         │
-│  │ (Deployment x3)  │  │                  │         │
-│  │                  │  │ - vLLM / TGI     │         │
-│  │ - API Gateway    │  │ - DeepSeek       │         │
-│  │ - Auth Service   │  │ - LLaMA          │         │
-│  │ - Session Mgr    │  └──────────────────┘         │
-│  │ - Orchestrator   │                                │
-│  │ - Model Router   │  ┌──────────────────┐         │
-│  │ - Config Svc     │  │ Data Services    │         │
-│  └──────────────────┘  │                  │         │
-│                         │ - PostgreSQL     │         │
-│  ┌──────────────────┐  │ - Redis Cluster  │         │
-│  │ Agent Node Pool  │  │ - MinIO / S3     │         │
-│  │ (弹性伸缩)        │  │ - Milvus/Qdrant  │         │
-│  │                  │  └──────────────────┘         │
-│  │ - Agent Pod x N  │                                │
-│  │ - gVisor 沙箱    │  ┌──────────────────┐         │
-│  │ - Workspace Vol  │  │ Repo Cache Pool  │         │
-│  └──────────────────┘  │ (bare repos SSD) │         │
-│                         └──────────────────┘         │
-└─────────────────────────────────────────────────────┘
-```
 
 ### 9.2 Warm Pool 弹性伸缩
 
-```
-请求流程：
-
-  User Request
-       │
-       ▼
-  ┌─────────┐   无空闲 Pod    ┌──────────┐
-  │ 查找空闲 │──────────────▶│ 创建新 Pod │
-  │ Agent   │                │ (~2-5s)   │
-  └────┬────┘                └────┬─────┘
-       │ (找到了)                  │
-       ▼                          ▼
-  ┌─────────┐              ┌──────────┐
-  │ 复用 Pod │              │ Clone    │
-  │ (热启动  │              │ Repo     │
-  │  <1s)   │              │ (~5-30s) │
-  └─────────┘              └────┬─────┘
-                                ▼
-                         ┌──────────┐
-                         │ Agent    │
-                         │ Running  │
-                         └──────────┘
-
-伸缩策略：
-  - 最小 warm pool：5 pods（热启动 <1s）
-  - 最大 Pod 数：按团队配额（默认 20/team）
-  - 空闲超时：10min → 销毁
-  - GPU pods：独立 node pool + 独立伸缩策略
-```
 
 ---
 
@@ -714,50 +298,12 @@ Layer 6: Audit
 
 ### Phase 1：核心可用（2-3 个月）
 
-```
-目标：一个用户可以登录 Web，选一个 Git 仓库，跟 Agent 对话
-
-需要实现：
-├── API Gateway + Auth (SSO/OIDC + JWT)
-├── Agent Runtime — 单 session 单 Pod
-│   ├── query() loop（继承 ch05）
-│   ├── 基础工具：Read/Write/Edit/Grep/Bash
-│   └── 沙箱：Docker 容器隔离
-├── Git Service — clone + workspace
-├── Session Manager — 基础状态持久化（Redis）
-├── Web App — 基础对话界面
-└── 外部 API 接入（Anthropic）
-```
 
 ### Phase 2：生产就绪（2-3 个月）
 
-```
-目标：多用户可用，有安全控制，IDE 插件可用
-
-需要实现：
-├── Agent Orchestrator — 多 Agent + Coordinator 模式
-├── Shell Sandbox 升级（gVisor/Firecracker）
-├── 权限系统完整版（7 模式 + 审批流）
-├── Memory 系统（4 层，继承 ch11）
-├── 私有模型接入（GPU Node Pool + vLLM）
-├── IDE Extensions（VSCode + JetBrains）
-└── 可观测性（Prometheus + Jaeger + ClickHouse）
-```
 
 ### Phase 3：生态完善（2-3 个月）
 
-```
-目标：内部工具生态接入，团队协作
-
-需要实现：
-├── MCP 内部工具注册中心
-├── CI/CD 集成（Jenkins/GitLab CI）
-├── 代码智能 RAG（Vector Store + tree-sitter）
-├── CLI 客户端
-├── 成本追踪 + 预算管理（继承 ch03）
-├── 会话协作（多用户加入同一 session）
-└── 合规审计（SOC2/ISO27001 准备）
-```
 
 ---
 
