@@ -1,346 +1,164 @@
-import { useState } from 'react';
+// Premium design system — Linear/Stripe-inspired
+const tokens = {
+  bg: '#faf9f7',
+  surface: '#ffffff',
+  border: '#e8e5e1',
+  text: '#1a1917',
+  muted: '#8b8680',
+  faint: '#b8b3ad',
+  // Accents
+  blue: '#3b82f6',
+  amber: '#f59e0b',
+  emerald: '#10b981',
+  violet: '#8b5cf6',
+  rose: '#f43f5e',
+  slate: '#64748b',
+};
 
-const PLANES = [
+const planes = [
   {
-    id: 'access',
-    name: 'Access Plane',
-    subtitle: '用户入口层',
-    icon: '🌐',
-    accent: '#d97757',
-    bg: 'linear-gradient(135deg, #1a1a1a 0%, #1f1a18 100%)',
-    border: 'rgba(217,119,87,0.25)',
-    services: [
-      [
-        { icon: '🌍', name: 'Web App', desc: 'React · SSE streaming' },
-        { icon: '💻', name: 'VS Code', desc: 'Extension API' },
-        { icon: '⌨️', name: 'CLI', desc: 'WebSocket proxy' },
-        { icon: '🖥️', name: 'JetBrains', desc: 'Plugin SDK' },
-      ],
-    ],
-    center: { icon: '🔐', name: 'API Gateway', desc: 'Auth · Route · Rate Limit' },
+    id: 'access', label: 'ACCESS', title: '用户入口', icon: '◈',
+    color: tokens.blue, items: [
+      { name: 'Web App', desc: 'React · SSE' },
+      { name: 'VS Code', desc: 'Extension' },
+      { name: 'CLI', desc: 'WebSocket' },
+      { name: 'Gateway', desc: 'Auth & Route' },
+    ]
   },
   {
-    id: 'control',
-    name: 'Control Plane',
-    subtitle: '管控调度层',
-    icon: '⚙️',
-    accent: '#c4a35a',
-    bg: 'linear-gradient(135deg, #1a1a1a 0%, #1a1917 100%)',
-    border: 'rgba(196,163,90,0.25)',
-    services: [
-      [
-        { icon: '🔑', name: 'Auth', desc: 'SSO/OIDC + RBAC' },
-        { icon: '📋', name: 'Session', desc: 'State Machine' },
-        { icon: '🎯', name: 'Orchestrator', desc: 'Coordinator' },
-      ],
-      [
-        { icon: '🤖', name: 'Model Router', desc: 'Public / Private' },
-        { icon: '⚡', name: 'Config', desc: 'Projects & Teams' },
-        { icon: '🛡️', name: 'Permissions', desc: '7 Modes + 审批' },
-      ],
-    ],
+    id: 'control', label: 'CONTROL', title: '管控调度', icon: '◇',
+    color: tokens.amber, items: [
+      { name: 'Auth', desc: 'SSO/OIDC' },
+      { name: 'Sessions', desc: 'State Machine' },
+      { name: 'Orchestrator', desc: 'Coordinator' },
+      { name: 'Model Router', desc: 'Public/Private' },
+      { name: 'Permissions', desc: '7 Modes' },
+      { name: 'Config', desc: 'Projects' },
+    ]
   },
   {
-    id: 'execution',
-    name: 'Execution Plane',
-    subtitle: 'Agent 运行时',
-    icon: '⚡',
-    accent: '#7b9c8e',
-    bg: 'linear-gradient(135deg, #1a1a1a 0%, #171a18 100%)',
-    border: 'rgba(123,156,142,0.25)',
-    isPod: true,
-    podLabel: 'Agent Pod (per session) · K8s Container',
-    services: [
-      [
-        { icon: '🔄', name: 'query() Loop', desc: 'ch05 generator' },
-        { icon: '🔧', name: 'Tool Pipeline', desc: 'ch06 14-step' },
-        { icon: '📦', name: 'Context', desc: '4-layer compact' },
-      ],
-      [
-        { icon: '📂', name: 'Repo Workspace', desc: 'CoW overlay' },
-        { icon: '🏖️', name: 'Shell Sandbox', desc: 'gVisor' },
-        { icon: '🔌', name: 'MCP Bridge', desc: 'Internal tools' },
-      ],
-    ],
-    external: [
-      { icon: '📡', name: 'Repo Service', desc: 'GitLab / Bitbucket' },
-      { icon: '🚀', name: 'Build/CI', desc: 'Jenkins' },
-      { icon: '🔗', name: 'MCP Registry', desc: 'Tool catalog' },
-    ],
+    id: 'exec', label: 'EXECUTION', title: 'Agent 运行时', icon: '◆',
+    color: tokens.emerald, items: [
+      { name: 'query() Loop', desc: 'ch05 generator' },
+      { name: 'Tool Pipeline', desc: 'ch06 14-step' },
+      { name: 'Context Mgr', desc: '4-layer compact' },
+      { name: 'Repo WS', desc: 'CoW overlay' },
+      { name: 'Shell Sandbox', desc: 'gVisor' },
+      { name: 'MCP Bridge', desc: 'Internal tools' },
+    ]
   },
   {
-    id: 'data',
-    name: 'Data Plane',
-    subtitle: '数据持久层',
-    icon: '💾',
-    accent: '#8b7ba8',
-    bg: 'linear-gradient(135deg, #1a1a1a 0%, #18171a 100%)',
-    border: 'rgba(139,123,168,0.25)',
-    services: [
-      [
-        { icon: '🗄️', name: 'Object Storage', desc: 'S3/MinIO · 对话 & 记忆' },
-        { icon: '⚡', name: 'Redis', desc: 'Session · Prompt Cache' },
-        { icon: '🔍', name: 'Vector Store', desc: 'Milvus · 代码索引' },
-        { icon: '🐘', name: 'PostgreSQL', desc: '用户 · 权限' },
-      ],
-    ],
+    id: 'data', label: 'DATA', title: '数据持久', icon: '○',
+    color: tokens.violet, items: [
+      { name: 'Object Storage', desc: 'S3/MinIO' },
+      { name: 'Redis', desc: 'Cache' },
+      { name: 'Vector Store', desc: 'Milvus' },
+      { name: 'PostgreSQL', desc: 'Users' },
+    ]
   },
 ];
 
-function ServiceCard({ icon, name, desc }: { icon: string; name: string; desc: string }) {
-  return (
-    <div style={{
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '8px',
-      padding: '10px 12px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '2px',
-      textAlign: 'center',
-      flex: '1 1 120px',
-      minWidth: '110px',
-      transition: 'all 0.2s ease',
-      cursor: 'default',
-    }}
-    onMouseEnter={e => {
-      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
-      e.currentTarget.style.transform = 'translateY(-1px)';
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
-      e.currentTarget.style.transform = 'translateY(0)';
-    }}
-    >
-      <span style={{ fontSize: '18px', opacity: 0.9 }}>{icon}</span>
-      <span style={{ fontWeight: 600, fontSize: '12px', color: '#e0dcd5' }}>{name}</span>
-      <span style={{ fontSize: '10px', color: '#8b8680', lineHeight: 1.3 }}>{desc}</span>
-    </div>
-  );
-}
-
-function Connector({ accent }: { accent: string }) {
-  return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      padding: '6px 0',
-    }}>
-      <div style={{
-        width: '1px',
-        height: '32px',
-        background: `linear-gradient(180deg, ${accent}40 0%, ${accent}20 100%)`,
-        position: 'relative',
-      }}>
-        <div style={{
-          position: 'absolute',
-          bottom: '-4px',
-          left: '-3px',
-          width: '7px',
-          height: '7px',
-          borderRadius: '50%',
-          background: accent,
-          opacity: 0.6,
-        }} />
-      </div>
-    </div>
-  );
-}
-
 export default function CloudArchitectureDiagram() {
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-
-  const toggle = (id: string) => {
-    const next = new Set(collapsed);
-    next.has(id) ? next.delete(id) : next.add(id);
-    setCollapsed(next);
-  };
-
   return (
     <div style={{
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      maxWidth: '860px',
-      margin: '0 auto',
-      background: '#141413',
-      borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.1)',
-      overflow: 'hidden',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      maxWidth: 880, margin: '0 auto',
+      background: tokens.bg, borderRadius: 24,
+      border: `1px solid ${tokens.border}`,
+      padding: '40px 36px',
     }}>
-      {/* Header */}
-      <div style={{
-        padding: '24px 28px 0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#e0dcd5', letterSpacing: '0.02em' }}>
-            Cloud Claude Code Architecture
-          </h3>
-          <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#8b8680' }}>
-            五层平面 · 12 个模块 · 3 Phase 交付
-          </p>
+      {/* Title */}
+      <div style={{ marginBottom: 36, textAlign: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: tokens.muted, marginBottom: 8 }}>
+          ARCHITECTURE OVERVIEW
         </div>
-        <div style={{ display: 'flex', gap: '10px', fontSize: '11px', color: '#8b8680' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: '#d97757' }} /> Access
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: '#c4a35a' }} /> Control
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: '#7b9c8e' }} /> Execution
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: '#8b7ba8' }} /> Data
-          </span>
-        </div>
+        <h3 style={{ fontSize: 22, fontWeight: 700, color: tokens.text, margin: 0, letterSpacing: '-0.02em' }}>
+          Cloud Claude Code — 五层平面架构
+        </h3>
       </div>
 
       {/* Planes */}
-      <div style={{ padding: '20px 24px 28px' }}>
-        {PLANES.map((plane, i) => {
-          const isCollapsed = collapsed.has(plane.id);
-          return (
-            <div key={plane.id}>
-              {i > 0 && <Connector accent={plane.accent} />}
-              <div style={{
-                border: `1px solid ${plane.border}`,
-                borderRadius: '12px',
-                overflow: 'hidden',
-              }}>
-                {/* Plane Header */}
-                <div
-                  onClick={() => toggle(plane.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 18px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    background: plane.bg,
-                    borderBottom: isCollapsed ? 'none' : `1px solid ${plane.border}`,
-                  }}
+      {planes.map((plane, i) => (
+        <div key={plane.id} style={{ marginBottom: i < planes.length - 1 ? 0 : 0 }}>
+          {/* Connector */}
+          {i > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+              <svg width="24" height="28" viewBox="0 0 24 28">
+                <line x1="12" y1="0" x2="12" y2="20" stroke={tokens.faint} strokeWidth="1" strokeDasharray="3 3" />
+                <polygon points="6,18 12,26 18,18" fill={plane.color} opacity="0.3" />
+              </svg>
+            </div>
+          )}
+
+          {/* Plane card */}
+          <div style={{
+            background: tokens.surface,
+            border: `1px solid ${tokens.border}`,
+            borderRadius: 14,
+            overflow: 'hidden',
+            transition: 'box-shadow 0.2s',
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '14px 20px',
+              borderBottom: `1px solid ${tokens.border}`,
+              background: '#fcfbf9',
+            }}>
+              <span style={{ color: plane.color, fontSize: 14 }}>{plane.icon}</span>
+              <span style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+                color: plane.color, background: plane.color + '12',
+                padding: '2px 8px', borderRadius: 4,
+              }}>{plane.label}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: tokens.text }}>{plane.title}</span>
+            </div>
+
+            {/* Items */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+              gap: '1px',
+              background: tokens.border,
+            }}>
+              {plane.items.map((item, j) => (
+                <div key={j} style={{
+                  background: tokens.surface,
+                  padding: '14px 16px',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#faf9f7'}
+                onMouseLeave={e => e.currentTarget.style.background = tokens.surface}
                 >
-                  <span style={{
-                    fontSize: '12px',
-                    transition: 'transform 0.2s',
-                    transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    color: plane.accent,
-                  }}>▼</span>
-                  <span style={{ fontSize: '16px' }}>{plane.icon}</span>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 6,
+                    background: plane.color + '10',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700, color: plane.color,
+                    flexShrink: 0,
+                  }}>
+                    {j + 1}
+                  </div>
                   <div>
-                    <span style={{ fontWeight: 700, fontSize: '13px', color: '#e0dcd5', letterSpacing: '0.03em' }}>
-                      {plane.name}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#8b8680', marginLeft: '8px' }}>{plane.subtitle}</span>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: tokens.text, lineHeight: 1.3 }}>{item.name}</div>
+                    <div style={{ fontSize: 11, color: tokens.muted, lineHeight: 1.3 }}>{item.desc}</div>
                   </div>
                 </div>
-
-                {/* Plane Body */}
-                {!isCollapsed && (
-                  <div style={{ padding: '16px', background: 'rgba(0,0,0,0.15)' }}>
-                    {/* Pod wrapper for Execution Plane */}
-                    {plane.isPod && (
-                      <div style={{
-                        border: '1px dashed rgba(123,156,142,0.3)',
-                        borderRadius: '10px',
-                        padding: '14px',
-                        marginBottom: '12px',
-                        background: 'rgba(123,156,142,0.04)',
-                      }}>
-                        <div style={{
-                          fontSize: '10px',
-                          color: '#7b9c8e',
-                          fontWeight: 600,
-                          letterSpacing: '0.05em',
-                          marginBottom: '10px',
-                          textAlign: 'center',
-                        }}>
-                          {plane.podLabel}
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-                          {plane.services.flat().map((s, j) => (
-                            <ServiceCard key={j} {...s} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Standard service grids */}
-                    {!plane.isPod && plane.services.map((row, ri) => (
-                      <div key={ri} style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                        justifyContent: 'center',
-                        marginBottom: ri < plane.services.length - 1 ? '8px' : 0,
-                      }}>
-                        {row.map((s, j) => (
-                          <ServiceCard key={j} {...s} />
-                        ))}
-                      </div>
-                    ))}
-
-                    {/* Center node for Access Plane */}
-                    {plane.center && (
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        marginTop: '12px',
-                        paddingTop: '12px',
-                        borderTop: `1px solid ${plane.border}`,
-                      }}>
-                        <ServiceCard {...plane.center} />
-                      </div>
-                    )}
-
-                    {/* External services for Execution Plane */}
-                    {plane.external && (
-                      <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                        justifyContent: 'center',
-                        marginTop: '12px',
-                        paddingTop: '12px',
-                        borderTop: '1px dashed rgba(123,156,142,0.2)',
-                      }}>
-                        {plane.external.map((s, j) => (
-                          <ServiceCard key={j} {...s} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      ))}
 
-      {/* Footer */}
-      <div style={{
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        padding: '14px 28px',
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '24px',
-        fontSize: '11px',
-        color: '#6b6560',
-        background: 'rgba(0,0,0,0.2)',
-        flexWrap: 'wrap',
-      }}>
-        <span>💡 点击 Plane 标题展开/折叠</span>
-        <span>·</span>
-        <span>Inherits all patterns from ch05–ch18</span>
-        <span>·</span>
-        <span>6–9 months · 3 Phase delivery</span>
+      {/* Legend */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginTop: 28, paddingTop: 20, borderTop: `1px solid ${tokens.border}` }}>
+        {planes.map(p => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: tokens.muted }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: p.color }} />
+            {p.label}
+          </div>
+        ))}
       </div>
     </div>
   );
