@@ -194,8 +194,6 @@ export async function* executeBatches(
 
 ## 4. Shell Sandbox 设计
 
-> 📐 交互式架构图见页面底部。
-
 ### 4.1 沙箱层级
 
 Shell 沙箱采用三层嵌套隔离。最外层 K8s Agent Pod（独立网络命名空间 + Resource Limits）。中间层 gVisor (runsc) 用户态内核（拦截危险 syscall，提供与应用内核之间的安全边界）。最内层容器（只读根文件系统 + /workspace 唯一可写目录 + /tmp tmpfs + seccomp profile）。预装工具包括 git、node、python、ripgrep、fd。
@@ -275,6 +273,157 @@ export const SANDBOX_LIMITS = {
   ],
 }
 ```
+
+---
+
+## 5. Repository Workspace 管理
+
+### 5.1 分层缓存架构
+
+每个 Agent Pod 需要访问代码仓库，但每次从 GitLab/Bitbucket 全量 clone 是不现实的（大仓库可能数 GB，clone 耗时 5-10 分钟）。我们采用三层缓存：
+
+```
+Layer 1: Repo Cache (bare repos on SSD, Node-local)
+  ↓  git clone --shared --reference
+Layer 2: CoW Overlay (per-Agent thin copy, <1s 创建)
+  ↓  agent 所有写入
+Layer 3: Workspace Volume (只读 base + 可写 overlay)
+```
+
+**Layer 1 — Repo Cache**：在 K8s Node 上维护常用仓库的 bare clone（`git clone --bare`），每 5 分钟 `git fetch` 更新。Cache 淘汰策略：LRU，保留最近 20 个仓库。
+
+```typescript
+// server/src/workspace/repo-cache.ts
+
+export class RepoCache {
+  private cacheDir = '/var/cache/repos'
+  private maxRepos = 20
+  private accessOrder: string[] = []  // LRU 链表
+
+  async getOrClone(repoUrl: string): Promise<string> {
+    const cacheKey = this.repoKey(repoUrl)
+    const barePath = `${this.cacheDir}/${cacheKey}`
+
+    if (existsSync(barePath)) {
+      // 更新 LRU
+      this.touch(cacheKey)
+      // 异步 fetch 最新
+      this.fetchBg(barePath).catch(() => {})
+      return barePath
+    }
+
+    // 首次 clone
+    await this.cloneBare(repoUrl, barePath)
+    this.evictIfNeeded()
+    return barePath
+  }
+
+  private async cloneBare(url: string, path: string): Promise<void> {
+    await exec('git', ['clone', '--bare', '--depth=50', url, path], {
+      timeout: 120_000,
+    })
+  }
+
+  private async fetchBg(path: string): Promise<void> {
+    await exec('git', ['-C', path, 'fetch', '--depth=50'], {
+      timeout: 30_000,
+    })
+  }
+}
+```
+
+### 5.2 CoW Workspace 创建
+
+Agent 启动时，不直接操作 bare repo，而是通过 overlay 创建可写 workspace：
+
+```typescript
+// server/src/workspace/cow-workspace.ts
+
+export async function createCowWorkspace(
+  bareRepoPath: string,
+  agentId: string,
+  branch: string,
+): Promise<Workspace> {
+  const wsPath = `/workspaces/${agentId}`
+
+  // Step 1: 创建 overlay 目录结构
+  await fs.mkdir(`${wsPath}/upper`, { recursive: true })   // 可写层
+  await fs.mkdir(`${wsPath}/work`, { recursive: true })    // overlay workdir
+  await fs.mkdir(`${wsPath}/merged`, { recursive: true })  // 合并视图
+
+  // Step 2: 挂载 overlayfs（lower=bare repo[只读], upper=可写层）
+  await exec('mount', [
+    '-t', 'overlay', 'overlay',
+    '-o', [
+      `lowerdir=${bareRepoPath}`,
+      `upperdir=${wsPath}/upper`,
+      `workdir=${wsPath}/work`,
+    ].join(','),
+    `${wsPath}/merged`,
+  ])
+
+  // Step 3: 在 merged 中创建临时分支
+  await exec('git', [
+    '-C', `${wsPath}/merged`,
+    'checkout', '-b', `agent-${agentId}-${Date.now()}`,
+    `origin/${branch}`,
+  ])
+
+  return {
+    path: `${wsPath}/merged`,
+    branch: `agent-${agentId}`,
+    baseBranch: branch,
+    agentId,
+  }
+}
+```
+
+### 5.3 修改隔离与清理
+
+- **修改隔离**：每个 Agent 的 upper 层独立，修改互不可见。Agent A 在 `/workspaces/agent-a/merged/src/` 的写入不会影响 Agent B。
+- **临时分支**：所有 commit 在 `agent-{uuid}` 分支上，绝不污染 main/master。
+- **清理策略**：Agent Pod 销毁时，卸载 overlay、删除 upper/work 目录。TTL 兜底：24h 后自动清理。
+
+```typescript
+// server/src/workspace/cleanup.ts
+
+export async function cleanupWorkspace(ws: Workspace): Promise<void> {
+  const wsPath = `/workspaces/${ws.agentId}`
+
+  // 1. 卸载 overlay
+  await exec('umount', [`${wsPath}/merged`]).catch(() => {})
+
+  // 2. 删除 upper/work 层
+  await fs.rm(`${wsPath}/upper`, { recursive: true, force: true })
+  await fs.rm(`${wsPath}/work`, { recursive: true, force: true })
+
+  // 3. 如果临时分支已 push，删除远程分支（可选）
+  if (ws.pushed) {
+    await exec('git', [
+      'push', 'origin', '--delete', ws.branch,
+    ]).catch(() => {})
+  }
+
+  // 4. 审计日志
+  auditLog.info('workspace_cleaned', {
+    agentId: ws.agentId,
+    branch: ws.branch,
+    filesCreated: ws.stats.filesCreated,
+    filesModified: ws.stats.filesModified,
+  })
+}
+```
+
+### 5.4 并发安全
+
+多个 Agent 操作同一仓库时的并发控制：
+
+| 场景 | 风险 | 策略 |
+|------|------|------|
+| 同文件同区域编辑 | 合并冲突 | Agent 不互相感知，PR 合并时人工解决 |
+| 同分支 push | 冲突 | 临时分支命名含 uuid，天然隔离 |
+| Bare repo fetch 时 clone | 不一致 | Read-Write Lock（fetch 持读锁，clone 持写锁） |
+| Workspace 清理时 Agent 仍活跃 | 数据丢失 | 清理前检查 Agent Pod 是否存在 |
 
 ---
 

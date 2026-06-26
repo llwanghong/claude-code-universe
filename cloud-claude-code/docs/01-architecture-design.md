@@ -106,11 +106,93 @@ JWT claims 包含：
 
 ### 4.5 Permission Engine（权限引擎）
 
-权限引擎继承 Claude Code 的 7 种模式（default / acceptEdits / plan / dontAsk / bypassPermissions / auto / bubble），并增加了企业维度。权限决策链为 6 步：Hook 决策 → 规则匹配（平台级 > 团队级 > 项目级） → 工具特定检查 → 模式默认值 → 交互式提示 → 审批流。
-继承 Claude Code ch06 的 7 种权限模式，增加企业维度：
+权限引擎是整个安全架构中最频繁被调用的组件——每个工具调用都要经过它。我们继承 Claude Code ch06 的成熟设计，并增加了企业环境所需的组织级规则和审批流。
 
+**7 种权限模式（继承 ch06）**：
 
-**审批流**：对 `DeployTool`、`DBTool(write)`、`K8sTool` 等高风险操作，自动创建审批 ticket。
+| 模式 | 行为 | 适用场景 |
+|------|------|---------|
+| `default` | 每次危险操作都询问 | 新用户、新项目默认 |
+| `acceptEdits` | 自动接受文件编辑（Write/Edit），其他仍询问 | 信任 Agent 改代码 |
+| `plan` | Agent 只读，所有写入阻止 | 代码审查、学习 |
+| `dontAsk` | 所有操作静默执行（最高信任） | CI/CD 自动化 |
+| `bypassPermissions` | 跳过权限检查（仅管理员） | 紧急操作 |
+| `auto` | 根据规则自动决定 | 日常开发主力 |
+| `bubble` | 遇到高权限操作时切换到默认模式 | 渐进式信任 |
+
+**企业扩展**：在 ch06 基础上增加了三层组织级规则：
+
+```typescript
+// server/src/control/permission-engine.ts
+
+export type PermissionLevel = 'platform' | 'team' | 'project'
+
+export interface PermissionRule {
+  id: string
+  level: PermissionLevel      // 优先级：platform > team > project
+  priority: number
+  match: {
+    tool?: string             // 工具名，如 "Bash"
+    pattern?: string          // 匹配模式，如 "git push*"
+    projectId?: string
+    environment?: string
+  }
+  decision: 'allow' | 'deny' | 'ask'
+  reason: string               // 决策理由（审计用）
+}
+
+// 示例：平台级规则（安全团队强制）
+const platformRule: PermissionRule = {
+  id: 'plat-001',
+  level: 'platform',
+  priority: 0,                 // 最高优先级
+  match: {
+    tool: 'Bash',
+    pattern: 'rm -rf *',       // 禁止递归删除
+  },
+  decision: 'deny',
+  reason: 'Block recursive delete — platform security policy',
+}
+
+// 团队级规则
+const teamRule: PermissionRule = {
+  id: 'team-auth-001',
+  level: 'team',
+  priority: 100,
+  match: {
+    tool: 'Deploy',
+    environment: 'production',
+  },
+  decision: 'ask',
+  reason: 'Production deployment requires team lead approval',
+}
+
+// 项目级规则（来自 .claude/rules.yaml）
+const projectRule: PermissionRule = {
+  id: 'proj-001',
+  level: 'project',
+  priority: 200,
+  match: {
+    tool: 'Bash',
+    pattern: 'git status*',
+  },
+  decision: 'allow',
+  reason: 'git status is always safe',
+}
+```
+
+**6 步权限决策链**：每一步都有完整的错误处理和审计日志。
+
+```
+Step 1: Hook Decision  → PreToolUse Hook 最先运行（allow/deny/modify/context）
+Step 2: Rule Matching  → 平台级 > 团队级 > 项目级，alwaysDeny 直接阻止
+Step 3: Tool Check     → 工具的 checkPermissions() 方法（含业务逻辑）
+Step 4: Mode Default   → 7 种模式默认行为
+Step 5: Interactive    → Web/IDE/CLI 权限对话框（30s 超时默认 deny）
+Step 6: Approval Flow  → 高风险操作 → Jira/飞书审批 ticket
+```
+
+**审批流**：对 `DeployTool`、`DBTool(write)`、`K8sTool` 等高风险操作，自动创建审批 ticket。审批对象在 Web/IDE/邮件/飞书中收到通知 → 查看详情（PR 链接、构建状态、变更 Diff）→ Approve / Reject。审批超时默认 24h，2 人 Approve 后 Agent 继续执行。完整流程见 03-security.md。
 
 ---
 

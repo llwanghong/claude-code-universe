@@ -20,9 +20,85 @@
 
 ---
 
-## 3. 权限模型详细设计
+## 2. 纵深防御架构 (Defense in Depth)
 
-> 📐 交互式权限流程图见页面底部。
+### 2.1 为什么需要 6 层
+
+安全领域有一条铁律：**没有任何单一防御层是完美的**。防火墙可能被绕过，JWT 可能被窃取，容器可能被逃逸。纵深防御的核心思想是：即使某一层被突破，下一层仍然提供保护。我们从 Claude Code 源码研究（ch06 权限系统、ch16 Sandbox）中借鉴了成熟模式，扩展到企业环境。
+
+### 2.2 6 层防线详解
+
+:::diagram SecurityLayersDiagram:::
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Layer 1: Network — 网络隔离                                   │
+│ · K8s NetworkPolicy: 仅 API Gateway 暴露 Ingress              │
+│ · Egress 白名单: 每项目级别定义允许出站的域名/IP                │
+│ · mTLS: Pod 间通信双向 TLS 认证                                │
+│ · 无线边界: Agent Pod 默认无 Egress（仅 tool 执行时开放）       │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 2: Authentication — 身份认证                            │
+│ · SSO/OIDC: Okta / Azure AD / LDAP 统一登录                   │
+│ · MFA: 所有用户强制多因素认证                                  │
+│ · JWT: access token 15min + refresh token 8h                  │
+│ · Service Account: 服务间 mTLS + Token Review                  │
+│ · API Key: CI/CD 集成场景，可撤销、限范围                       │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 3: Authorization — 权限控制                             │
+│ · RBAC: Admin / TeamLead / Developer / Viewer 四角色           │
+│ · Project ACL: 每项目独立访问控制列表                          │
+│ · Tool Permission: 继承 ch06 7 种模式 + 6 步决策链             │
+│ · Approval Flow: 高风险操作自动创建审批 ticket                  │
+│ · Data-Level: DBTool 限制表/行数，DeployTool 限制环境          │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 4: Isolation — 执行隔离                                 │
+│ · Per-Session Pod: 独立 K8s Pod，非共享进程                    │
+│ · gVisor Sandbox: 用户态内核拦截 57+ 危险 syscall              │
+│ · CoW Workspace: overlayfs 只读 base + 可写 overlay            │
+│ · Seccomp Profile: 禁用 ptrace/mount/kexec/init_module 等     │
+│ · NetworkPolicy per Pod: 动态 egress 白名单                   │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 5: Data Protection — 数据保护                           │
+│ · Vault: 所有 Secret（Token/Key/Password）动态注入，不落盘     │
+│ · Encryption at Rest: Object Storage + DB 均加密               │
+│ · Encryption in Transit: mTLS everywhere                      │
+│ · PII Redaction: 发送外部模型前自动脱敏                        │
+│ · Token Scope: 每 Session 独立临时 Token，TTL ≤ 24h           │
+│ · Git Credential: git clone 使用 short-lived deploy token     │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 6: Audit & Detection — 审计与检测                       │
+│ · 不可变审计日志: ClickHouse，所有 API + Tool + Auth 事件      │
+│ · 实时告警: 沙箱异常退出 / restricted 外部 API 调用 / 非工时访问│
+│ · Anomaly Detection: 基于历史基线的异常行为检测                │
+│ · Session Replay: 完整对话记录，支持事后审查                    │
+│ · Compliance Export: 按 SOC2/ISO27001 要求导出                 │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 2.3 防线联动
+
+各层之间通过 shared context 联动。示例攻击链：
+
+```
+攻击: 恶意代码仓库注入 prompt 诱导危险命令
+
+Layer 1 (Network): Egress 白名单阻止 curl 外部 URL → ✅ 拦截
+  如果被绕过...
+Layer 3 (Authorization): Bash(curl) 需要确认 → ✅ 弹窗警告
+  如果用户误点 Allow...
+Layer 4 (Isolation): gVisor 阻止 connect() 到非白名单 IP → ✅ 拦截
+  如果沙箱配置失误...
+Layer 5 (Data): Token 不在沙箱环境变量里，Vault 不响应该请求 → ✅ 拦截
+  如果 Token 硬编码在代码里...
+Layer 6 (Audit): 操作被完整记录，告警触发安全团队响应 → ✅ 事后处置
+```
+
+每个 Agent 请求经过全部 6 层。每层独立做决策，不需要信任上一层的判断。
+
+---
+
+## 3. 权限模型详细设计
 
 ### 3.1 权限决策流程
 

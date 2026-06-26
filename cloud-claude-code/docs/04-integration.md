@@ -4,10 +4,122 @@
 
 ---
 
+## 1. 集成层概述
+
+企业环境中，Claude Code Agent 需要与多个内部系统交互——代码仓库、CI/CD 流水线、项目管理工具、监控系统等。集成层设计遵循三个核心原则：
+
+1. **抽象优先**：所有外部系统通过统一接口访问（`GitService` / `BuildService`），具体实现可替换
+2. **最小权限**：Agent 获取的是最短有效期的临时凭证，按需申请
+3. **可观测**：每个集成调用都埋点追踪（duration、success/failure、认证方式）
+
+```typescript
+// server/src/integration/types.ts
+
+export interface Integration {
+  name: string
+  type: 'git' | 'ci' | 'mcp' | 'notification'
+  health: 'healthy' | 'degraded' | 'unhealthy'
+  checkHealth(): Promise<HealthStatus>
+}
+
+export interface IntegrationRegistry {
+  register(integration: Integration): void
+  get<T extends Integration>(name: string): T
+  list(type?: string): Integration[]
+  getHealth(): IntegrationHealthMap
+}
+```
+
+集成层位于 Execution Plane 和外部系统之间（见总体架构 §7）。每个 Agent Pod 内的 MCP Bridge 组件负责与 Integration Registry 通信，Agent 调用的工具最终通过对应 Service 实现落地到 GitLab/Bitbucket/Jenkins 等系统。
+
+---
+
 ## 2. 代码仓库集成（Git Service）
 
 ### 2.1 抽象层设计
 
+Git Service 是集成层中最关键的接口——Agent 的所有代码操作（clone、branch、commit、push、PR）都通过它完成。抽象层屏蔽 GitLab API、Bitbucket API 的差异，让 Agent 用统一的方式操作任何仓库。
+
+```typescript
+// server/src/integration/git/types.ts
+
+export interface GitService {
+  // 仓库操作
+  clone(url: string, ref?: string): Promise<Workspace>
+  fetch(ws: Workspace): Promise<void>
+  checkout(ws: Workspace, ref: string): Promise<void>
+
+  // 变更操作
+  diff(ws: Workspace): Promise<DiffResult>
+  status(ws: Workspace): Promise<StatusResult>
+  stage(ws: Workspace, files: string[]): Promise<void>
+  commit(ws: Workspace, message: string): Promise<CommitResult>
+  push(ws: Workspace): Promise<void>
+
+  // 分支操作
+  createBranch(ws: Workspace, name: string): Promise<void>
+  deleteBranch(ws: Workspace, name: string): Promise<void>
+  listBranches(ws: Workspace): Promise<Branch[]>
+
+  // PR/MR 操作
+  createPR(ws: Workspace, params: PRParams): Promise<PullRequest>
+  getPR(id: string): Promise<PullRequest>
+  searchPRs(query: PRSearchQuery): Promise<PullRequest[]>
+}
+
+export interface PRParams {
+  sourceBranch: string
+  targetBranch: string
+  title: string
+  body: string
+  reviewers?: string[]
+  labels?: string[]
+  draft?: boolean
+}
+
+export interface PullRequest {
+  id: string
+  title: string
+  url: string
+  status: 'open' | 'merged' | 'closed'
+  sourceBranch: string
+  targetBranch: string
+  reviewers: Reviewer[]
+  ciStatus: 'pending' | 'running' | 'passed' | 'failed'
+}
+```
+
+**认证策略**：Git Service 不持有长期凭证。每次 Agent Pod 创建时，Control Plane 的 Auth Service 签发一个 short-lived deploy token（TTL = session TTL），scope 限定到目标仓库。GitLab/Bitbucket 侧配置对应的 Project Access Token。Session 结束时 token 自动撤销。
+
+```typescript
+// server/src/integration/git/auth.ts
+
+export async function createGitAuth(
+  session: Session,
+  repo: RepoConfig,
+): Promise<GitAuth> {
+  if (repo.provider === 'gitlab') {
+    const token = await gitlabApi.createProjectAccessToken(repo.projectId, {
+      name: `claude-agent-${session.id}`,
+      scopes: ['read_repository', 'write_repository'],
+      expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+    })
+    return { type: 'oauth', token: token.accessToken }
+  }
+
+  if (repo.provider === 'bitbucket') {
+    // Bitbucket 用 App Password 或 OAuth
+    const token = await bitbucketApi.createRepositoryToken(repo.repoSlug, {
+      name: `claude-agent-${session.id}`,
+      permissions: ['read', 'write'],
+      expiry: '24h',
+    })
+    return { type: 'bearer', token }
+  }
+
+  throw new UnsupportedProvider(repo.provider)
+}
+```
 
 ### 2.2 多平台适配
 
@@ -76,11 +188,152 @@ Agent: "I'll fix the auth bug"
 
 ### 3.1 抽象层
 
+CI/CD 系统（Jenkins/GitLab CI）通过统一接口暴露给 Agent，让 Agent 能够触发构建、查看日志、检查状态、触发部署。
+
+```typescript
+// server/src/integration/ci/types.ts
+
+export interface BuildService {
+  // 构建
+  triggerBuild(params: BuildParams): Promise<Build>
+  getBuildLog(buildId: string): AsyncGenerator<string>
+  getBuildStatus(buildId: string): Promise<BuildStatus>
+
+  // 部署
+  triggerDeploy(params: DeployParams): Promise<Deployment>
+  getDeployStatus(deployId: string): Promise<DeployStatus>
+  rollback(deployId: string): Promise<Deployment>
+
+  // 查询
+  listBuilds(project: string, limit?: number): Promise<Build[]>
+  listDeployments(env: string, limit?: number): Promise<Deployment[]>
+}
+
+export interface BuildParams {
+  project: string
+  branch: string
+  commit: string
+  triggeredBy: string    // sessionId
+  variables?: Record<string, string>
+}
+
+export interface DeployParams {
+  environment: 'staging' | 'canary' | 'production'
+  version: string
+  buildId: string
+  triggeredBy: string
+}
+
+export interface Build {
+  id: string
+  status: 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
+  url: string            // 构建详情页链接
+  branch: string
+  commit: string
+  startedAt: Date
+  finishedAt?: Date
+}
+```
+
+**认证策略**：与 Git Service 类似，Build Service 使用短生命周期 token。Jenkins → API Token（session-scoped），GitLab CI → Job Token 或 Project Access Token。Token 通过 Vault 动态获取，不硬编码。
 
 ### 3.2 Agent 视角的构建/部署流
 
+Agent 完整的构建→部署工作流：
 
-### 3.3 部署安全策略
+```
+User: "Deploy the auth fix to production"
+
+Agent 执行:
+
+1. [Git] 确认所有修改已 commit 并 push 到 agent-fix-auth-{uuid}
+2. [Git] 创建 PR（target: main）
+3. [Jenkins] triggerBuild({
+     project: "backend-api",
+     branch: "agent-fix-auth-{uuid}",
+     commit: "abc1234"
+   })
+4. [Jenkins] 流式读取构建日志，实时展示给用户
+   "Build #4567: running... tests: 142/150 passed"
+5. [Jenkins] getBuildStatus("4567") → "success"
+6. [Deploy] 检查 deploy-policies.yaml:
+   - production 环境需要审批
+   - 需要 canary_validated 检查
+7. [Notification] 发送审批请求到团队 Slack/飞书
+   "Agent 请求部署到 production，PR #1234，构建 ✅"
+8. [Wait] TL 在 Web/IDE 中点击 Approve
+9. [Jenkins] triggerDeploy({
+     environment: "production",
+     version: "v2.3.1",
+     buildId: "4567"
+   })
+10. Agent: "✅ Deployed v2.3.1 to production. Build #4567."
+```
+
+```typescript
+// server/src/integration/ci/jenkins-service.ts
+
+export class JenkinsService implements BuildService {
+  constructor(
+    private api: JenkinsAPI,
+    private config: JenkinsConfig,
+  ) {}
+
+  async triggerBuild(params: BuildParams): Promise<Build> {
+    const job = await this.api.getJob(params.project)
+    const build = await job.build({
+      parameters: {
+        BRANCH: params.branch,
+        COMMIT: params.commit,
+        TRIGGERED_BY: `claude-agent-${params.triggeredBy}`,
+        ...params.variables,
+      },
+    })
+
+    return {
+      id: build.number.toString(),
+      status: 'pending',
+      url: build.url,
+      branch: params.branch,
+      commit: params.commit,
+      startedAt: new Date(),
+    }
+  }
+
+  async *getBuildLog(buildId: string): AsyncGenerator<string> {
+    const build = await this.api.getBuild(parseInt(buildId))
+    const logStream = await build.logStream()
+
+    for await (const line of logStream) {
+      yield line.text
+    }
+  }
+
+  async triggerDeploy(params: DeployParams): Promise<Deployment> {
+    // 调用 Jenkins deploy job 或 GitLab CI deploy stage
+    const deployJob = await this.api.getJob(`deploy-${params.environment}`)
+    const deploy = await deployJob.build({
+      parameters: {
+        VERSION: params.version,
+        BUILD_ID: params.buildId,
+        TRIGGERED_BY: params.triggeredBy,
+      },
+    })
+
+    return {
+      id: deploy.number.toString(),
+      environment: params.environment,
+      status: 'in_progress',
+      version: params.version,
+    }
+  }
+}
+```
+
+**关键安全措施**：
+- `production` 环境部署必须经过审批流（见 §3.3 deploy-policies.yaml）
+- 部署前必须 CI 全部通过
+- 部署操作记录到审计日志（谁、什么时间、什么版本、哪个 session）
 
 ```yaml
 # .claude/deploy-policies.yaml

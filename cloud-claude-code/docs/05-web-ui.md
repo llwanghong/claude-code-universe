@@ -9,6 +9,78 @@
 - **多会话**：Tab 切换，同时处理多个项目/任务
 - **权限可视化**：危险操作清晰标注，审批状态可追踪
 
+## 2. 页面布局与架构
+
+### 2.1 整体布局
+
+Web 应用采用经典的三栏式 IDE 布局，但针对 AI 对话场景做了优化。左侧为上下文面板（文件树 + Agent 状态），中间为对话主体，右侧为辅助面板（可选，默认隐藏）。
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Header Bar                                                       │
+│  [☰] [Project: backend-api ▼] [Session 1] [Session 2] [+]  [⚙] [👤]│
+├──────────┬───────────────────────────────────────┬────────────────┤
+│ Sidebar  │         Main Conversation              │ Right Panel    │
+│          │                                        │ (collapsible)  │
+│ ┌──────┐ │  ┌────────────────────────────────┐   │                │
+│ │Files │ │  │ User: "Fix the auth bug"        │   │ Agent Status   │
+│ │ ──── │ │  │                                 │   │ ─────────────  │
+│ │ src/  │ │  │ Claude: I'll analyze the issue. │   │ ● running      │
+│ │  auth/│ │  │                                 │   │ 1 tool active  │
+│ │  api/ │ │  │ ┌ Tool: Read ────────────────┐ │   │                │
+│ │  ui/  │ │  │ │ File: src/auth/login.ts    │ │   │ Memory Panel   │
+│ │ tests/│ │  │ │ Result: 42 lines           │ │   │ ─────────────  │
+│ └──────┘ │  │ └─────────────────────────────┘ │   │ · coding style │
+│          │  │                                 │   │ · known bugs   │
+│ ┌──────┐ │  │ Claude: Found the issue. The   │   │                │
+│ │Agents│ │  │ null check on line 23...        │   │                │
+│ └──────┘ │  └────────────────────────────────┘   │                │
+│          ├───────────────────────────────────────┤                │
+│          │ Prompt Input                          │                │
+│          │ [@file] [/command] [🔗]          [⏎]  │                │
+└──────────┴───────────────────────────────────────┴────────────────┘
+```
+
+### 2.2 响应式设计
+
+三种断点适配不同场景：
+
+| 断点 | 宽度 | Sidebar | 对话 | Right Panel |
+|------|------|---------|------|-------------|
+| Desktop | ≥1280px | 固定 260px | 自适应 | 可选 280px |
+| Laptop | 768-1279px | 可折叠，默认折叠 | 自适应 | 隐藏 |
+| Mobile | <768px | 抽屉式覆盖 | 全宽 | 隐藏 |
+
+### 2.3 深色/浅色主题
+
+基于 CSS 变量实现双主题，跟随系统 `prefers-color-scheme`，可在设置中手动切换：
+
+```css
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #e1e4e8;
+  --text-primary: #1a1a2e;
+  --text-secondary: #586069;
+  --border: #e1e4e8;
+  --accent: #0969da;
+  --danger: #cf222e;
+  --success: #1a7f37;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --border: #30363d;
+  --accent: #58a6ff;
+  --danger: #f85149;
+  --success: #3fb950;
+}
+```
+
 ## 3. 组件树
 
 ```
@@ -376,6 +448,173 @@ export class CloudClient {
   }
 }
 ```
+
+---
+
+## 9. 性能优化策略
+
+### 9.1 虚拟滚动
+
+对话历史可能包含数百条消息（每条约 50-500 tokens 渲染为 Markdown + 代码块）。全量渲染会卡顿，必须使用虚拟滚动仅渲染可视区域：
+
+```typescript
+// web/src/components/ChatView/MessageList.tsx
+
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+export function MessageList({ messages, streamingContent }: Props) {
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => {
+      // 根据消息内容估算高度
+      const msg = messages[index]
+      if (msg.type === 'tool_result') return 200
+      if (msg.content?.includes('```')) return 350
+      return 80 + Math.ceil(msg.content?.length || 0 / 80) * 20
+    },
+    overscan: 5,  // 预渲染可视区外 5 条
+  })
+
+  return (
+    <div ref={parentRef} className="message-list" style={{ height: '100%', overflow: 'auto' }}>
+      <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+        {virtualizer.getVirtualItems().map((virtualRow) => (
+          <div
+            key={virtualRow.key}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
+          >
+            <MessageRow message={messages[virtualRow.index]} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### 9.2 代码块懒加载
+
+代码块超过 200 行时，默认只渲染前 50 行 + "Show All" 按钮，点击后完整渲染。Syntax highlighting 使用 Web Worker 异步处理，避免阻塞主线程：
+
+```typescript
+// web/src/components/ChatView/CodeBlock.tsx
+
+export function CodeBlock({ language, code }: Props) {
+  const [expanded, setExpanded] = useState(false)
+  const [highlighted, setHighlighted] = useState<string | null>(null)
+  const workerRef = useRef<Worker>()
+
+  const lines = code.split('\n')
+  const isLong = lines.length > 200
+  const displayCode = isLong && !expanded
+    ? lines.slice(0, 50).join('\n') + '\n// ... (truncated)'
+    : code
+
+  useEffect(() => {
+    // 异步语法高亮，不阻塞主线程
+    workerRef.current = new Worker(
+      new URL('../workers/highlight.worker.ts', import.meta.url)
+    )
+    workerRef.current.onmessage = (e) => setHighlighted(e.data)
+    workerRef.current.postMessage({ language, code: displayCode })
+
+    return () => workerRef.current?.terminate()
+  }, [language, displayCode])
+
+  return (
+    <div className="code-block">
+      <div className="code-block-header">
+        <span>{language}</span>
+        <button onClick={() => navigator.clipboard.writeText(code)}>
+          📋 Copy
+        </button>
+      </div>
+      <pre>
+        <code dangerouslySetInnerHTML={{ __html: highlighted || escapeHtml(displayCode) }} />
+      </pre>
+      {isLong && (
+        <button className="show-all" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Show Less' : `Show All ${lines.length} Lines`}
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
+### 9.3 流式渲染优化
+
+SSE 推送 token 速率可达 50-100 tokens/s。每次 token 都触发 React re-render 会导致性能问题。使用 `requestAnimationFrame` 批量更新：
+
+```typescript
+// web/src/lib/stream-buffer.ts
+
+export class StreamBuffer {
+  private buffer: string[] = []
+  private rafId: number | null = null
+  private callback: (text: string) => void
+
+  constructor(callback: (text: string) => void) {
+    this.callback = callback
+  }
+
+  push(token: string): void {
+    this.buffer.push(token)
+    if (this.rafId === null) {
+      this.rafId = requestAnimationFrame(() => {
+        this.flush()
+      })
+    }
+  }
+
+  private flush(): void {
+    const text = this.buffer.join('')
+    this.buffer = []
+    this.rafId = null
+    this.callback(text)
+  }
+}
+```
+
+### 9.4 Monaco Editor 按需加载
+
+Diff 视图使用 Monaco Editor 仅在需要时动态导入：
+
+```typescript
+// web/src/components/Diff/DiffView.tsx
+
+const MonacoDiff = lazy(() => import('./MonacoDiff'))
+
+export function DiffView({ original, modified, filePath }: Props) {
+  return (
+    <Suspense fallback={<UnifiedDiff original={original} modified={modified} />}>
+      <MonacoDiff original={original} modified={modified} filePath={filePath} />
+    </Suspense>
+  )
+}
+```
+
+Monaco 首次加载 ~2MB（gzipped ~400KB），使用 fallback 渲染 unified diff 避免空白等待。
+
+### 9.5 性能预算
+
+| 指标 | 目标 | 测量方式 |
+|------|------|---------|
+| FCP (First Contentful Paint) | <1.5s | Lighthouse |
+| TTI (Time to Interactive) | <3s | Lighthouse |
+| SSE 首 token 延迟 | <500ms | 自定义 metrics |
+| 虚拟滚动 FPS | >30fps (200 条消息) | React DevTools Profiler |
+| Monaco 加载时间 | <2s (cached) | Performance API |
+| 内存占用 | <200MB (3 个 Tab) | Chrome Task Manager |
 
 ---
 

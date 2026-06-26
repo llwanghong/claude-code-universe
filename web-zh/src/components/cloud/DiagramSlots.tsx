@@ -3,11 +3,13 @@ import { createRoot } from 'react-dom/client';
 import CloudArchitectureDiagram from './CloudArchitectureDiagram';
 import ExecutionPlaneDiagram from './ExecutionPlaneDiagram';
 import PermissionFlowDiagram from './PermissionFlowDiagram';
+import SecurityLayersDiagram from './SecurityLayersDiagram';
 
 const DIAGRAMS: Record<string, React.ComponentType> = {
   CloudArchitectureDiagram,
   ExecutionPlaneDiagram,
   PermissionFlowDiagram,
+  SecurityLayersDiagram,
 };
 
 export default function DiagramSlots() {
