@@ -1,6 +1,8 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import CloudArchitectureDiagram from '../../components/cloud/CloudArchitectureDiagram.tsx';
+import SecurityLayersDiagram from '../../components/cloud/SecurityLayersDiagram.tsx';
 
 const titles: Record<string, string> = {
   '01-architecture-design': '总体架构设计',
@@ -43,5 +45,19 @@ const { Content } = await render(entry);
     ">
       <Content />
     </article>
+
+    {entry.id === '01-architecture-design' && (
+      <div class="my-12 not-prose">
+        <h2 class="text-xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6 text-center">📐 交互式架构图</h2>
+        <CloudArchitectureDiagram client:load />
+      </div>
+    )}
+
+    {entry.id === '03-security' && (
+      <div class="my-12 not-prose">
+        <h2 class="text-xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6 text-center">🛡️ 交互式安全架构图</h2>
+        <SecurityLayersDiagram client:load />
+      </div>
+    )}
   </main>
 </BaseLayout>

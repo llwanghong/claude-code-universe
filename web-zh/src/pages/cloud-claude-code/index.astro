@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+import CloudArchitectureDiagram from '../../components/cloud/CloudArchitectureDiagram.tsx';
 
 const titles: Record<string, string> = {
   '01-architecture-design': '总体架构设计 — 五层平面架构',
@@ -39,6 +40,11 @@ docs.sort((a, b) => a.id.localeCompare(b.id));
       <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-[var(--color-secondary)]">5 层平面架构</span>
     </div>
 
+    <div class="my-10">
+      <CloudArchitectureDiagram client:load />
+    </div>
+
+    <h2 class="text-xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-6">📚 设计文档</h2>
     <div class="space-y-4">
       {docs.map(doc => (
         <a
