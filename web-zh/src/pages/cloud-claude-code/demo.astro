@@ -1,0 +1,79 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CloudArchitectureDiagram from '../../components/cloud/CloudArchitectureDiagram.tsx';
+import SecurityLayersDiagram from '../../components/cloud/SecurityLayersDiagram.tsx';
+---
+
+<BaseLayout title="云端 Claude Code — 架构演示" description="交互式架构图演示">
+  <main style="background: #0d0d0c; min-height: 100vh;">
+    <!-- Hero -->
+    <section style="padding: 80px 24px 60px; text-align: center;">
+      <span style="display: inline-block; padding: 4px 12px; border: 1px solid rgba(217,119,87,0.3); border-radius: 20px; font-size: 12px; color: #d97757; margin-bottom: 20px; letter-spacing: 0.05em;">
+        ENTERPRISE DESIGN · v1.0
+      </span>
+      <h1 style="font-size: clamp(32px, 5vw, 48px); font-weight: 800; color: #e0dcd5; margin: 0 0 16px; letter-spacing: -0.02em; line-height: 1.15;">
+        云端 Claude Code
+      </h1>
+      <p style="font-size: 18px; color: #8b8680; max-width: 640px; margin: 0 auto 40px; line-height: 1.6;">
+        基于 Claude Code 18 章源码架构研究，为企业内部代码仓库、CI/CD 和部署系统设计的云端 Agent 平台。
+      </p>
+      <div style="display: flex; gap: 12px; justifyContent: center; flexWrap: wrap;">
+        <a href="/claude-code-universe/cloud-claude-code/" style="padding: 10px 24px; background: #d97757; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          查看设计文档 →
+        </a>
+        <a href="https://github.com/llwanghong/claude-code-universe/tree/main/cloud-claude-code" style="padding: 10px 24px; background: rgba(255,255,255,0.06); color: #e0dcd5; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          GitHub →
+        </a>
+      </div>
+    </section>
+
+    <!-- Architecture Diagram -->
+    <section style="padding: 0 24px 80px;">
+      <CloudArchitectureDiagram client:load />
+    </section>
+
+    <!-- Security Diagram -->
+    <section style="padding: 0 24px 80px;">
+      <SecurityLayersDiagram client:load />
+    </section>
+
+    <!-- Key Metrics -->
+    <section style="padding: 0 24px 80px;">
+      <div style="max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+        {[
+          { label: 'Design Docs', value: '5', unit: 'documents' },
+          { label: 'Total Lines', value: '2,238', unit: 'lines of design' },
+          { label: 'Modules', value: '12', unit: 'core modules' },
+          { label: 'Inherited Chapters', value: '18', unit: 'from book study' },
+        ].map(m => (
+          <div style={{
+            background: '#141413',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            padding: '24px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '36px', fontWeight: 800, color: '#e0dcd5', lineHeight: 1 }}>
+              {m.value}
+            </div>
+            <div style={{ fontSize: '13px', color: '#8b8680', marginTop: '6px' }}>
+              {m.label}
+            </div>
+            <div style={{ fontSize: '11px', color: '#6b6560' }}>
+              {m.unit}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="border-top: 1px solid rgba(255,255,255,0.06); padding: 40px 24px; text-align: center;">
+      <p style="font-size: 12px; color: #6b6560;">
+        Built from <a href="/claude-code-universe/ch01-architecture/" style="color: #d97757;">18-chapter Claude Code architecture study</a> ·
+        <a href="/claude-code-universe/cloud-claude-code/" style="color: #d97757;">Design Docs</a> ·
+        <a href="https://github.com/llwanghong/claude-code-universe" style="color: #d97757;">GitHub</a>
+      </p>
+    </footer>
+  </main>
+</BaseLayout>
