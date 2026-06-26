@@ -21,4 +21,8 @@ const aisdk = defineCollection({
   loader: glob({ pattern: '0*.md', base: '../ai-sdk' }),
 });
 
-export const collections = { chapters, deepdive, supplements, tutorial, aisdk };
+const cloudcode = defineCollection({
+  loader: glob({ pattern: '0*.md', base: '../cloud-claude-code/docs' }),
+});
+
+export const collections = { chapters, deepdive, supplements, tutorial, aisdk, cloudcode };

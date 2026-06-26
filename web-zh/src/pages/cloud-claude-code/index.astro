@@ -1,0 +1,74 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const titles: Record<string, string> = {
+  '01-architecture-design': '总体架构设计 — 五层平面架构',
+  '02-execution-plane': '执行层详细设计 — Agent Runtime & Tool Pipeline',
+  '03-security': '安全架构设计 — 纵深防御 & 权限模型',
+  '04-integration': '集成层设计 — Git/CI/CD/MCP 对接方案',
+  '05-web-ui': 'Web UI 设计 — 组件树 & 交互流',
+};
+
+const descriptions: Record<string, string> = {
+  '01-architecture-design': '基于 18 章 Claude Code 源码研究，设计企业云端 Agent 平台的完整架构方案。覆盖 Access/Control/Execution/Data/Integration 五层平面，包含 12 个核心模块的详细设计。',
+  '02-execution-plane': 'Agent Runtime 核心实现：async generator 循环（继承 ch05）、14 步工具流水线（继承 ch06）、4 层上下文压缩、Shell 沙箱（gVisor）、Workspace 生命周期管理、错误恢复升级阶梯。',
+  '03-security': '威胁模型 + 6 层纵深防御 + 6 步权限决策链 + 数据脱敏 + Token 管理 + Git 安全策略 + 安全告警规则 + SOC2/ISO27001/GDPR 合规检查清单。',
+  '04-integration': 'Git Service 抽象层（GitLab/Bitbucket 适配）、Build Service（Jenkins/GitLab CI）、MCP 内部工具注册中心、通知系统、VSCode 扩展架构、CLI thin client 设计。',
+  '05-web-ui': 'React 组件树（20+ 组件）、页面布局 ASCII 设计稿、3 个核心交互流、状态管理（useReducer）、SSE 流式客户端、响应式设计、具体 TSX 代码实现。',
+};
+
+const docs = await getCollection('cloudcode');
+docs.sort((a, b) => a.id.localeCompare(b.id));
+---
+
+<BaseLayout title="云端 Claude Code — 实战项目" description="企业级云端 Agent 平台架构设计文档">
+  <main class="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-20">
+    <a href="/claude-code-universe/" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-terracotta)] no-underline mb-4 inline-block">← 返回首页</a>
+    <div class="mb-4">
+      <span class="text-xs font-medium px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">🆕 实战篇</span>
+    </div>
+    <h1 class="text-3xl font-bold font-[var(--font-serif)] text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-4">☁️ 云端 Claude Code</h1>
+    <p class="text-lg text-[var(--color-muted)] mb-4">
+      基于 <a href="/claude-code-universe/ch01-architecture/" class="text-[var(--color-terracotta)]">18 章 Claude Code 源码架构研究</a>，设计并实现一个企业内部使用的云端 Agent 平台。
+    </p>
+    <div class="flex flex-wrap gap-2 mb-10 text-sm">
+      <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-[var(--color-secondary)]">自建 K8s + GitLab + Jenkins</span>
+      <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-[var(--color-secondary)]">混合模型（外部 API + 私有 GPU）</span>
+      <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-[var(--color-secondary)]">Web + IDE + CLI</span>
+      <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-[var(--color-secondary)]">5 层平面架构</span>
+    </div>
+
+    <div class="space-y-4">
+      {docs.map(doc => (
+        <a
+          href={`/claude-code-universe/cloud-claude-code/${doc.id}/`}
+          class="block p-6 rounded-lg border border-[var(--color-border)] dark:border-[#333] hover:border-[var(--color-terracotta)] transition-colors no-underline group"
+        >
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">{doc.id === '01-architecture-design' ? '🏗️' : doc.id === '02-execution-plane' ? '⚙️' : doc.id === '03-security' ? '🔒' : doc.id === '04-integration' ? '🔌' : '🎨'}</span>
+            <h2 class="text-lg font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] group-hover:text-[var(--color-terracotta)] transition-colors">
+              {titles[doc.id] || doc.id}
+            </h2>
+            <span class="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">v1.0</span>
+          </div>
+          <p class="text-sm text-[var(--color-muted)] leading-relaxed">{descriptions[doc.id] || ''}</p>
+        </a>
+      ))}
+    </div>
+
+    <div class="mt-12 p-6 rounded-lg bg-gray-50 dark:bg-gray-900 border border-[var(--color-border)] dark:border-[#333]">
+      <h2 class="text-lg font-semibold text-[var(--color-charcoal)] dark:text-[var(--color-cream)] mb-3">📂 项目结构</h2>
+      <pre class="text-sm text-[var(--color-muted)] bg-transparent p-0"><code>cloud-claude-code/
+├── README.md                    ← 项目总览
+├── docs/                        ← 设计文档（5 篇）
+│   ├── 01-architecture-design.md
+│   ├── 02-execution-plane.md
+│   ├── 03-security.md
+│   ├── 04-integration.md
+│   └── 05-web-ui.md
+├── web/                         ← Web 应用（Astro + React）
+└── server/                      ← 后端服务（TypeScript/Node.js）</code></pre>
+    </div>
+  </main>
+</BaseLayout>
