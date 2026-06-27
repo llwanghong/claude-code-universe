@@ -308,15 +308,12 @@ sessionTimeout: 3600 # 会话最长 1h
 
 ### 6.2 数据生命周期
 
-```
-Agent 对话中 → Redis (会话热状态, <1ms 延迟)
-     ↓ Session 结束
-Checkpoint → Object Storage (完整转录 JSONL)
-     ↓ 24h 后  
-Redis TTL 过期 → 热数据自动清除
-     ↓ 90 天后
-Object Storage 归档 → Glacier / 冷存储（合规保留）
-```
+数据经历四个阶段，从热存储到冷归档逐级沉降：
+
+1. **Agent 对话中** → Redis 存储会话热状态（<1ms 延迟），Object Storage 流式追加转录 JSONL
+2. **Session 结束后** → 完整转录写为不可变 JSONL，checkpoint 包含最后一次 Context Collapse 的快照
+3. **24 小时后** → Redis TTL 自动过期，热数据清除；对话历史保留在 Object Storage（可随时通过 sessionId 恢复）
+4. **90 天后** → Object Storage 数据归档至 Glacier / 冷存储，满足 SOC2 合规保留要求
 
 每个数据存储都有独立的备份和灾难恢复策略。Object Storage 采用 MinIO 多站点复制，PostgreSQL 使用 streaming replication + WAL 归档。
 
@@ -386,17 +383,15 @@ interface BuildService {
 
 ### 8.2 数据流向安全边界
 
-```
-用户请求 → API Gateway (mTLS)
-              ↓
-         Control Plane (JWT 鉴权 + RBAC + Permission Engine)
-              ↓
-         Agent Pod (隔离 K8s Pod + gVisor)
-         ├── 外部 API (Anthropic/OpenAI)  ← 仅 public/internal 项目，脱敏后发送
-         ├── 私有模型 GPU (vLLM/TGI)      ← restricted 项目，数据不出集群
-         ├── 代码仓库 (GitLab/Bitbucket)   ← 内网，short-lived deploy token
-         └── CI/CD (Jenkins)              ← 内网，session-scoped token
-```
+请求从用户到模型的数据流经过完整的纵深防御链：
+
+1. **API Gateway** — TLS 终结，JWT 验证，限流，审计日志记录。所有请求的统一入口
+2. **Control Plane** — JWT claims 鉴权，RBAC 角色检查，Permission Engine 6 步决策，模型路由（根据项目敏感级别选择外部 API 或私有模型）
+3. **Agent Pod** — 隔离的 K8s Pod + gVisor 沙箱，从此处发起四条数据路径：
+   - **→ 外部 API**（Anthropic/OpenAI）：仅 public/internal 项目，数据经 PII 脱敏管道后发送
+   - **→ 私有模型 GPU**（vLLM/TGI）：restricted 项目，数据不出集群，mTLS 内网通信
+   - **→ 代码仓库**（GitLab/Bitbucket）：内网，使用 session-scoped deploy token（24h TTL）
+   - **→ CI/CD**（Jenkins/GitLab CI）：内网，session-scoped token，高风险操作需审批
 
 **关键约束**：（1）Restricted 项目的代码绝不离开集群；（2）所有外部 API 请求经过 PII 脱敏管道；（3）Agent Pod 的 egress 白名单在 session 创建时动态生成，session 结束时销毁。
 
@@ -417,17 +412,13 @@ K8s 集群划分为四个 Node Pool，各自独立伸缩：
 
 ### 9.2 Agent Pool 弹性伸缩
 
-```
-Warm Pool (5 pods)  ← 预热就绪，新 session 直接分配 (<1s)
-       ↓
-Active Pool (N pods) ← 活跃 session，每用户可多个（不同项目/分支）
-       ↓
-Idle Detection      ← 10min 无活动 → 标记 idle
-       ↓
-Graceful Drain      ← 给 Agent 30s 保存状态（checkpoint → Object Storage）
-       ↓
-Pod Recycle         ← 删除 Pod + 清理 workspace + 删除临时分支
-```
+Agent Pod 的生命周期包含 5 个阶段：
+
+1. **Warm Pool**（5 pods）— 预热就绪的 Pod，新 session 直接分配（启动延迟 <1s）。Warm Pool < 5 时立即补充
+2. **Active Pool**（N pods）— 活跃 session 的 Pod。同一用户可持有多个（不同项目/分支），按团队配额限制（默认 20/team）
+3. **Idle Detection** — 10 分钟内无活动 → 标记为 idle，准备回收
+4. **Graceful Drain** — 给 Agent 30 秒保存状态（checkpoint → Object Storage），不接受新请求
+5. **Pod Recycle** — 删除 Pod、清理 CoW workspace、删除临时分支（`agent-{uuid}`）、撤销 short-lived token
 
 伸缩触发条件：
 - **扩容**：Warm Pool < 5 时立即补充；活跃 session 数 > 当前 Pod 数 × 80% 时预扩容
@@ -436,38 +427,22 @@ Pod Recycle         ← 删除 Pod + 清理 workspace + 删除临时分支
 
 ### 9.3 网络拓扑
 
-```
-Internet / Intranet
-       │
-       ▼
-┌──────────────┐
-│  TLS / mTLS  │
-└──────┬───────┘
-       │
-┌──────▼───────────────────────────────────────┐
-│            API Gateway (Ingress)              │
-│    rate limiting · auth · audit · routing     │
-└──────┬───────────────────────────────────────┘
-       │
-┌──────▼────────┐  ┌─────────────┐  ┌─────────┐
-│ Control Plane │  │ Agent Pool  │  │ GPU Pool│
-│ (3x replicas) │  │ (弹性 N pods)│  │ (GPU 推理)│
-│ mTLS ──────── │  │ │ │  │  │   │  │         │
-└───────────────┘  └─┼─┼──┼──┼───┘  └─────────┘
-                     │ │  │  │
-                     ▼ ▼  ▼  ▼
-                ┌──────────────────┐
-                │   Data Pool      │
-                │ PG / Redis / S3  │
-                │ Milvus / ClickHouse│
-                └──────────────────┘
-```
+系统网络分为 5 个安全区段，由外向内的访问控制逐步收紧：
 
+| 区段 | 组件 | 入站规则 | 出站规则 |
+|------|------|---------|---------|
+| **公网边界** | TLS 终结 | 公网 HTTPS (443) | — |
+| **DMZ** | API Gateway (Ingress) | 仅 TLS 终结后的流量 | → Control Plane |
+| **管控区** | Control Plane（Auth, Session, Orchestrator, Router, Permission） | 仅 API Gateway | → Agent Pool, GPU Pool, Data Pool |
+| **执行区** | Agent Pool（弹性 Pod）、GPU Pool（推理） | 仅 Control Plane（mTLS） | → Data Pool（ClusterIP）、外部 API（动态白名单） |
+| **数据区** | PostgreSQL, Redis, MinIO/S3, Milvus, ClickHouse | 仅管控区和执行区 | 不主动出站 |
+
+通信规则：
 - API Gateway 是唯一公网入口（TLS 终结 + JWT 验证 + 限流）
-- Control Plane ↔ Agent Pool 内网通信（mTLS）
-- Agent Pool → Data Pool 通过内部 Service（ClusterIP）
-- GPU Pool 仅 Control Plane 可达（Agent 不直连模型）
-- Agent Egress 白名单：API Gateway 在 session 创建时生成动态 NetworkPolicy
+- Control Plane ↔ Agent Pool：内网 mTLS
+- Agent Pool → Data Pool：K8s ClusterIP Service，不暴露到集群外
+- GPU Pool 仅 Control Plane 可达，Agent 不直连模型
+- Agent Egress 白名单：session 创建时为 Pod 动态生成 NetworkPolicy（允许的域名/IP 由项目级别决定）
 
 ---
 
