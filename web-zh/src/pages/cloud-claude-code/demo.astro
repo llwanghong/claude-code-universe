@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import CloudArchitectureDiagram from '../../components/cloud/CloudArchitectureDiagram.tsx';
 import ExecutionPlaneDiagram from '../../components/cloud/ExecutionPlaneDiagram.tsx';
 import PermissionFlowDiagram from '../../components/cloud/PermissionFlowDiagram.tsx';
+import SecurityLayersDiagram from '../../components/cloud/SecurityLayersDiagram.tsx';
 ---
 
 <BaseLayout title="云端 Claude Code — Demo" description="交互式架构图演示">
@@ -36,6 +37,8 @@ import PermissionFlowDiagram from '../../components/cloud/PermissionFlowDiagram.
       <ExecutionPlaneDiagram client:load />
       <div style="height: 48px" />
       <PermissionFlowDiagram client:load />
+      <div style="height: 48px" />
+      <SecurityLayersDiagram client:load />
 
     </div>
   </main>
