@@ -292,6 +292,8 @@ sessionTimeout: 3600 # 会话最长 1h
 
 ## 6. Data Plane — 数据层
 
+数据层是信息存储和检索的基础。设计遵循两个原则：**热冷分离**（Redis 存热数据、Object Storage 存冷数据）和 **按用途选型**（事务型用 PG、搜索型用向量库、时序型用 ClickHouse）。
+
 ### 6.1 存储选型
 
 | 数据类型 | 存储 | 理由 |
@@ -304,11 +306,29 @@ sessionTimeout: 3600 # 会话最长 1h
 | Audit Log | ClickHouse | 时序数据、高写入吞吐 |
 | Prompt Cache | Redis | KV 缓存，低延迟 |
 
+### 6.2 数据生命周期
+
+```
+Agent 对话中 → Redis (会话热状态, <1ms 延迟)
+     ↓ Session 结束
+Checkpoint → Object Storage (完整转录 JSONL)
+     ↓ 24h 后  
+Redis TTL 过期 → 热数据自动清除
+     ↓ 90 天后
+Object Storage 归档 → Glacier / 冷存储（合规保留）
+```
+
+每个数据存储都有独立的备份和灾难恢复策略。Object Storage 采用 MinIO 多站点复制，PostgreSQL 使用 streaming replication + WAL 归档。
+
 ---
 
 ## 7. 集成层
 
+集成层是 Agent 与外部企业系统交互的桥梁。通过统一的抽象接口屏蔽 GitLab/Bitbucket/Jenkins 等系统的差异，Agent 不直接调用各系统 API。
+
 ### 7.1 代码仓库 — Git Service 抽象层
+
+Agent 的所有代码操作（clone、branch、commit、push、PR）通过统一接口完成。无论底层是 GitLab 还是 Bitbucket，Agent 只看到 `GitService`。认证使用 session-scoped deploy token（24h TTL，session 结束自动撤销）。
 
 ```typescript
 interface GitService {
@@ -327,6 +347,8 @@ class BitbucketService implements GitService { /* ... */ }
 
 ### 7.2 CI/CD — Build Service 抽象层
 
+Agent 通过统一接口触发构建、读取构建日志、检查状态、触发部署。高风险操作（如 production 部署）通过审批流控制。
+
 ```typescript
 interface BuildService {
   triggerBuild(project: string, branch: string): Promise<Build>
@@ -337,13 +359,46 @@ interface BuildService {
 }
 ```
 
+### 7.3 MCP 内部工具注册
+
+企业内部的 MCP Server（如 Jira MCP、K8s MCP、DB MCP）通过 Registry 注册和发现。Agent 通过 MCP Bridge 按需调用，工具可见性按团队和项目控制。
+
+> 完整设计见 [集成层设计](./04-integration.md) 和 [执行层 §3.2](./02-execution-plane.md)。
+
 ---
 
 ## 8. 安全架构
 
+> 完整设计见 [安全架构设计](./03-security.md)，此处为总体概述。
+
 ### 8.1 纵深防御 6 层
 
-安全架构采用 6 层纵深防御：Layer 1 (Network) — K8s NetworkPolicy 最小权限 + Ingress 仅 Gateway 暴露 + Egress 白名单 + mTLS。Layer 2 (Auth) — SSO/OIDC + MFA + JWT + Service Account + API Key。Layer 3 (Authorization) — RBAC 四角色 + Project ACL + Tool Permission（7 modes）。Layer 4 (Isolation) — 独立 Pod + gVisor 沙箱 + CoW workspace + Seccomp 禁用危险 syscall。Layer 5 (Data) — Vault 密钥管理 + Encryption at rest + PII 脱敏 + 每 Session 独立临时 Token。Layer 6 (Audit) — ClickHouse 不可变审计日志 + 告警规则（权限异常、沙箱逃逸、非工作时间 restricted 访问）。
+安全架构采用 6 层纵深防御，不信任任何单一防御层。每一层独立做决策，即使上层被突破，下层仍然提供保护：
+
+| 层 | 名称 | 机制 | 关键实现 |
+|----|------|------|---------|
+| L1 | **Network** | 网络隔离 | K8s NetworkPolicy（仅 API Gateway 暴露 Ingress）、Egress 白名单（每项目级别）、mTLS（Pod 间双向 TLS 认证）、Agent Pod 默认无 Egress |
+| L2 | **Authentication** | 身份认证 | SSO/OIDC（Okta/Azure AD/LDAP）+ MFA、JWT（access 15min + refresh 8h）、Service Account（mTLS + Token Review）、API Key（CI/CD 场景，可撤销） |
+| L3 | **Authorization** | 权限控制 | RBAC 四角色（Admin/TeamLead/Developer/Viewer）、Project ACL、ch06 7 种权限模式 + 6 步决策链、审批流（高风险操作自动创建 ticket） |
+| L4 | **Isolation** | 执行隔离 | 每会话独立 K8s Pod（非共享进程）、gVisor (runsc) 用户态内核（拦截 57+ 危险 syscall）、CoW overlay workspace、Seccomp（禁用 ptrace/mount/kexec） |
+| L5 | **Data** | 数据保护 | Vault 密钥管理（Token 动态注入不落盘）、Encryption at rest（Object Storage + DB）、PII 脱敏（发送外部 API 前）、每 Session 独立临时 Token（TTL ≤ 24h） |
+| L6 | **Audit** | 审计检测 | ClickHouse 不可变审计日志（完整 API + Tool + Auth 事件）、实时告警（权限异常 / 沙箱逃逸 / 非工时 restricted 访问 / Circuit Breaker 触发）、Anomaly Detection（基于历史基线） |
+
+### 8.2 数据流向安全边界
+
+```
+用户请求 → API Gateway (mTLS)
+              ↓
+         Control Plane (JWT 鉴权 + RBAC + Permission Engine)
+              ↓
+         Agent Pod (隔离 K8s Pod + gVisor)
+         ├── 外部 API (Anthropic/OpenAI)  ← 仅 public/internal 项目，脱敏后发送
+         ├── 私有模型 GPU (vLLM/TGI)      ← restricted 项目，数据不出集群
+         ├── 代码仓库 (GitLab/Bitbucket)   ← 内网，short-lived deploy token
+         └── CI/CD (Jenkins)              ← 内网，session-scoped token
+```
+
+**关键约束**：（1）Restricted 项目的代码绝不离开集群；（2）所有外部 API 请求经过 PII 脱敏管道；（3）Agent Pod 的 egress 白名单在 session 创建时动态生成，session 结束时销毁。
 
 ---
 
@@ -351,7 +406,68 @@ interface BuildService {
 
 ### 9.1 K8s 集群布局
 
-K8s 集群包含四个 Node Pool：Control Plane Pool（API Gateway、Auth、Session、Orchestrator 等服务，Deployment x3 保证高可用）、Agent Pool（弹性伸缩，每 session 一个 Pod，gVisor 沙箱 + Workspace Volume）、GPU Pool（vLLM/TGI 推理服务，运行 DeepSeek/LLaMA 等私有模型，独立伸缩策略）、Data Pool（PostgreSQL、Redis Cluster、MinIO/S3、Milvus/Qdrant）。伸缩策略：最小 Warm Pool 5 pods（热启动 <1s）、最大按团队配额（默认 20/team）、空闲 10min 自动销毁。
+K8s 集群划分为四个 Node Pool，各自独立伸缩：
+
+| Node Pool | 运行负载 | 配置 | 伸缩策略 |
+|-----------|---------|------|---------|
+| **Control Plane Pool** | API Gateway、Auth Service、Session Manager、Agent Orchestrator、Model Router、Permission Engine | Deployment ×3 HA，2 CPU / 4 Gi per replica | 固定 3 副本，按 CPU 75% 触发 HPA |
+| **Agent Pool** | Agent Pod（每 session 一个）、gVisor 沙箱、CoW Workspace Volume | 每 Pod 2 CPU / 4 Gi / 10 Gi ephemeral-storage | Warm Pool min 5（热启动 <1s），按团队配额上限（默认 20/team），空闲 10min 自动回收 |
+| **GPU Pool** | vLLM / TGI 推理服务（DeepSeek/LLaMA 等私有模型） | NVIDIA A100 or L40S，每节点 1-4 GPU | 独立伸缩，按 GPU 利用率 + 请求队列深度 |
+| **Data Pool** | PostgreSQL（用户/权限）、Redis Cluster（会话热状态）、MinIO/S3（对话历史/Memory）、Milvus/Qdrant（代码向量索引）、ClickHouse（审计日志） | 各组件按需配置 | 存储类弹性伸缩，不可变数据（审计日志）定期归档 |
+
+### 9.2 Agent Pool 弹性伸缩
+
+```
+Warm Pool (5 pods)  ← 预热就绪，新 session 直接分配 (<1s)
+       ↓
+Active Pool (N pods) ← 活跃 session，每用户可多个（不同项目/分支）
+       ↓
+Idle Detection      ← 10min 无活动 → 标记 idle
+       ↓
+Graceful Drain      ← 给 Agent 30s 保存状态（checkpoint → Object Storage）
+       ↓
+Pod Recycle         ← 删除 Pod + 清理 workspace + 删除临时分支
+```
+
+伸缩触发条件：
+- **扩容**：Warm Pool < 5 时立即补充；活跃 session 数 > 当前 Pod 数 × 80% 时预扩容
+- **缩容**：空闲 Pod 超过 Warm Pool 大小 × 3 时逐出最旧 Pod
+- **配额**：每团队硬上限（默认 20），超限排队等待（FIFO，超时 5min 返回 429）
+
+### 9.3 网络拓扑
+
+```
+Internet / Intranet
+       │
+       ▼
+┌──────────────┐
+│  TLS / mTLS  │
+└──────┬───────┘
+       │
+┌──────▼───────────────────────────────────────┐
+│            API Gateway (Ingress)              │
+│    rate limiting · auth · audit · routing     │
+└──────┬───────────────────────────────────────┘
+       │
+┌──────▼────────┐  ┌─────────────┐  ┌─────────┐
+│ Control Plane │  │ Agent Pool  │  │ GPU Pool│
+│ (3x replicas) │  │ (弹性 N pods)│  │ (GPU 推理)│
+│ mTLS ──────── │  │ │ │  │  │   │  │         │
+└───────────────┘  └─┼─┼──┼──┼───┘  └─────────┘
+                     │ │  │  │
+                     ▼ ▼  ▼  ▼
+                ┌──────────────────┐
+                │   Data Pool      │
+                │ PG / Redis / S3  │
+                │ Milvus / ClickHouse│
+                └──────────────────┘
+```
+
+- API Gateway 是唯一公网入口（TLS 终结 + JWT 验证 + 限流）
+- Control Plane ↔ Agent Pool 内网通信（mTLS）
+- Agent Pool → Data Pool 通过内部 Service（ClusterIP）
+- GPU Pool 仅 Control Plane 可达（Agent 不直连模型）
+- Agent Egress 白名单：API Gateway 在 session 创建时生成动态 NetworkPolicy
 
 ---
 
