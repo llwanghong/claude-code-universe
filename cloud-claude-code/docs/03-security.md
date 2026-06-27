@@ -1,6 +1,6 @@
 # 安全架构设计
 
-> 版本：v1.0 | 日期：2026-06-26 | 依赖：[总体架构](./01-architecture-design.md)
+> 版本：v1.0 | 日期：2026-06-26 | 依赖：[总体架构](../01-architecture-design/)
 
 
 :::diagram PermissionFlowDiagram:::
