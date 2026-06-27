@@ -13,33 +13,21 @@
 
 ### 2.1 整体布局
 
-Web 应用采用经典的三栏式 IDE 布局，但针对 AI 对话场景做了优化。左侧为上下文面板（文件树 + Agent 状态），中间为对话主体，右侧为辅助面板（可选，默认隐藏）。
+Web 应用采用经典的三栏式 IDE 布局，但针对 AI 对话场景做了优化：
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  Header Bar                                                       │
-│  [☰] [Project: backend-api ▼] [Session 1] [Session 2] [+]  [⚙] [👤]│
-├──────────┬───────────────────────────────────────┬────────────────┤
-│ Sidebar  │         Main Conversation              │ Right Panel    │
-│          │                                        │ (collapsible)  │
-│ ┌──────┐ │  ┌────────────────────────────────┐   │                │
-│ │Files │ │  │ User: "Fix the auth bug"        │   │ Agent Status   │
-│ │ ──── │ │  │                                 │   │ ─────────────  │
-│ │ src/  │ │  │ Claude: I'll analyze the issue. │   │ ● running      │
-│ │  auth/│ │  │                                 │   │ 1 tool active  │
-│ │  api/ │ │  │ ┌ Tool: Read ────────────────┐ │   │                │
-│ │  ui/  │ │  │ │ File: src/auth/login.ts    │ │   │ Memory Panel   │
-│ │ tests/│ │  │ │ Result: 42 lines           │ │   │ ─────────────  │
-│ └──────┘ │  │ └─────────────────────────────┘ │   │ · coding style │
-│          │  │                                 │   │ · known bugs   │
-│ ┌──────┐ │  │ Claude: Found the issue. The   │   │                │
-│ │Agents│ │  │ null check on line 23...        │   │                │
-│ └──────┘ │  └────────────────────────────────┘   │                │
-│          ├───────────────────────────────────────┤                │
-│          │ Prompt Input                          │                │
-│          │ [@file] [/command] [🔗]          [⏎]  │                │
-└──────────┴───────────────────────────────────────┴────────────────┘
-```
+**顶部 Header Bar**：侧栏切换按钮、项目选择器（下拉切换仓库）、会话 Tabs（多 Tab 并行，可拖拽排序）、设置菜单、用户菜单
+
+**左侧 Sidebar**（260px，桌面端默认展开；笔记本端默认折叠；移动端抽屉式覆盖）：
+- **FileTree Panel**：仓库文件浏览，支持搜索过滤、点击 @mention 引用文件到对话
+- **AgentStatus Panel**：子 Agent 运行状态（运行中 / 已完成 / 错误）
+- **Memory Panel**：项目记忆条目列表（编码风格、已知坑、架构约束）
+
+**中间 Main Conversation**（自适应宽度）：
+- **MessageList**：虚拟滚动消息列表，每条消息可包含流式 Markdown、语法高亮代码块、Diff 视图、工具结果（终端输出 / 文件预览 / 构建日志）
+- **PermissionDialog**：权限确认弹窗（工具名 + 具体命令 + 风险等级 + Allow Once / Always Allow / Deny）
+- **PromptInput**：底部输入栏，支持 @file 自动补全、/ 命令面板、附件上传
+
+**右侧 Right Panel**（280px，可选，默认隐藏）：Agent 状态详情、Memory 条目、工具执行历史
 
 ### 2.2 响应式设计
 

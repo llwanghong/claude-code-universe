@@ -30,51 +30,14 @@
 
 :::diagram SecurityLayersDiagram:::
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ Layer 1: Network — 网络隔离                                   │
-│ · K8s NetworkPolicy: 仅 API Gateway 暴露 Ingress              │
-│ · Egress 白名单: 每项目级别定义允许出站的域名/IP                │
-│ · mTLS: Pod 间通信双向 TLS 认证                                │
-│ · 无线边界: Agent Pod 默认无 Egress（仅 tool 执行时开放）       │
-├──────────────────────────────────────────────────────────────┤
-│ Layer 2: Authentication — 身份认证                            │
-│ · SSO/OIDC: Okta / Azure AD / LDAP 统一登录                   │
-│ · MFA: 所有用户强制多因素认证                                  │
-│ · JWT: access token 15min + refresh token 8h                  │
-│ · Service Account: 服务间 mTLS + Token Review                  │
-│ · API Key: CI/CD 集成场景，可撤销、限范围                       │
-├──────────────────────────────────────────────────────────────┤
-│ Layer 3: Authorization — 权限控制                             │
-│ · RBAC: Admin / TeamLead / Developer / Viewer 四角色           │
-│ · Project ACL: 每项目独立访问控制列表                          │
-│ · Tool Permission: 继承 ch06 7 种模式 + 6 步决策链             │
-│ · Approval Flow: 高风险操作自动创建审批 ticket                  │
-│ · Data-Level: DBTool 限制表/行数，DeployTool 限制环境          │
-├──────────────────────────────────────────────────────────────┤
-│ Layer 4: Isolation — 执行隔离                                 │
-│ · Per-Session Pod: 独立 K8s Pod，非共享进程                    │
-│ · gVisor Sandbox: 用户态内核拦截 57+ 危险 syscall              │
-│ · CoW Workspace: overlayfs 只读 base + 可写 overlay            │
-│ · Seccomp Profile: 禁用 ptrace/mount/kexec/init_module 等     │
-│ · NetworkPolicy per Pod: 动态 egress 白名单                   │
-├──────────────────────────────────────────────────────────────┤
-│ Layer 5: Data Protection — 数据保护                           │
-│ · Vault: 所有 Secret（Token/Key/Password）动态注入，不落盘     │
-│ · Encryption at Rest: Object Storage + DB 均加密               │
-│ · Encryption in Transit: mTLS everywhere                      │
-│ · PII Redaction: 发送外部模型前自动脱敏                        │
-│ · Token Scope: 每 Session 独立临时 Token，TTL ≤ 24h           │
-│ · Git Credential: git clone 使用 short-lived deploy token     │
-├──────────────────────────────────────────────────────────────┤
-│ Layer 6: Audit & Detection — 审计与检测                       │
-│ · 不可变审计日志: ClickHouse，所有 API + Tool + Auth 事件      │
-│ · 实时告警: 沙箱异常退出 / restricted 外部 API 调用 / 非工时访问│
-│ · Anomaly Detection: 基于历史基线的异常行为检测                │
-│ · Session Replay: 完整对话记录，支持事后审查                    │
-│ · Compliance Export: 按 SOC2/ISO27001 要求导出                 │
-└──────────────────────────────────────────────────────────────┘
-```
+| 层 | 名称 | 核心策略 |
+|----|------|---------|
+| L1 | **Network** | K8s NetworkPolicy（仅 API Gateway 暴露 Ingress）、Egress 白名单（每项目级别）、mTLS（Pod 间双向 TLS）、Agent Pod 默认无 Egress |
+| L2 | **Authentication** | SSO/OIDC + MFA、JWT（access 15min + refresh 8h）、Service Account（mTLS + Token Review）、API Key（CI/CD 场景，可撤销） |
+| L3 | **Authorization** | RBAC 四角色 + Project ACL、Tool Permission（ch06 7 种模式 + 6 步决策链）、高风险操作审批流、环境闸门（staging / production） |
+| L4 | **Isolation** | 独立 Pod（非共享进程）、gVisor (runsc) 用户态内核、CoW overlay workspace、Seccomp（禁用 ptrace/mount/kexec/init_module/delete_module） |
+| L5 | **Data** | Vault 密钥管理（Token 动态注入不落盘）、Encryption at rest + in transit、PII 脱敏（外部 API 发送前）、每 Session 独立临时 Token（TTL ≤ 24h） |
+| L6 | **Audit** | ClickHouse 不可变审计日志、实时告警（权限异常 / 沙箱逃逸 / 非工时 restricted 访问 / Circuit Breaker）、Anomaly Detection、合规导出 |
 
 ### 2.3 防线联动
 
