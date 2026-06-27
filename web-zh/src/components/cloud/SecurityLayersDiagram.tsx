@@ -1,3 +1,11 @@
+const tokens = {
+  bg: '#faf9f7',
+  surface: '#ffffff',
+  border: '#e8e5e1',
+  text: '#1a1917',
+  muted: '#8b8680',
+};
+
 const LAYERS = [
   {
     name: 'Network',
@@ -40,20 +48,19 @@ const LAYERS = [
 export default function SecurityLayersDiagram() {
   return (
     <div style={{
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
       maxWidth: '760px',
       margin: '0 auto',
-      background: '#141413',
+      background: tokens.bg,
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.1)',
+      border: `1px solid ${tokens.border}`,
       overflow: 'hidden',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
     }}>
-      <div style={{ padding: '24px 28px 0' }}>
-        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#e0dcd5', letterSpacing: '0.02em' }}>
+      <div style={{ padding: '28px 28px 0' }}>
+        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: tokens.text, letterSpacing: '0.02em' }}>
           Defense in Depth
         </h3>
-        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#8b8680' }}>
+        <p style={{ margin: '4px 0 0', fontSize: '12px', color: tokens.muted }}>
           六层纵深防御 · 从网络边界到审计追溯
         </p>
       </div>
@@ -63,7 +70,6 @@ export default function SecurityLayersDiagram() {
           <div key={i} style={{
             display: 'flex',
             gap: '14px',
-            marginBottom: i < LAYERS.length - 1 ? '0' : 0,
             position: 'relative',
           }}>
             {/* Number + connector */}
@@ -78,8 +84,8 @@ export default function SecurityLayersDiagram() {
                 width: '26px',
                 height: '26px',
                 borderRadius: '50%',
-                background: layer.accent + '20',
-                border: `1px solid ${layer.accent}40`,
+                background: layer.accent + '18',
+                border: `1.5px solid ${layer.accent}50`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -92,10 +98,10 @@ export default function SecurityLayersDiagram() {
               </div>
               {i < LAYERS.length - 1 && (
                 <div style={{
-                  width: '1px',
+                  width: '1.5px',
                   flex: 1,
                   minHeight: '20px',
-                  background: `linear-gradient(180deg, ${layer.accent}30 0%, ${LAYERS[i+1].accent}20 100%)`,
+                  background: `linear-gradient(180deg, ${layer.accent}40 0%, ${LAYERS[i+1].accent}30 100%)`,
                   margin: '4px 0',
                 }} />
               )}
@@ -104,41 +110,39 @@ export default function SecurityLayersDiagram() {
             {/* Content */}
             <div style={{
               flex: 1,
-              border: `1px solid ${layer.accent}20`,
+              border: `1px solid ${tokens.border}`,
               borderRadius: '10px',
               padding: '14px 16px',
               marginBottom: '10px',
-              background: `linear-gradient(135deg, ${layer.accent}06 0%, transparent 100%)`,
-              transition: 'all 0.2s ease',
+              background: tokens.surface,
+              transition: 'box-shadow 0.2s ease',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = layer.accent + '40';
-              e.currentTarget.style.background = `linear-gradient(135deg, ${layer.accent}0c 0%, transparent 100%)`;
+              e.currentTarget.style.boxShadow = `0 2px 12px ${layer.accent}18`;
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = layer.accent + '20';
-              e.currentTarget.style.background = `linear-gradient(135deg, ${layer.accent}06 0%, transparent 100%)`;
+              e.currentTarget.style.boxShadow = 'none';
             }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <span style={{ fontSize: '16px' }}>{layer.icon}</span>
-                <span style={{ fontWeight: 700, fontSize: '13px', color: '#e0dcd5', letterSpacing: '0.02em' }}>
+                <span style={{ fontWeight: 700, fontSize: '13px', color: tokens.text, letterSpacing: '0.02em' }}>
                   Layer {i + 1}: {layer.name}
                 </span>
               </div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                 gap: '4px',
                 paddingLeft: '6px',
               }}>
                 {layer.items.map((item, j) => (
                   <div key={j} style={{
                     fontSize: '12px',
-                    color: '#9b9690',
+                    color: tokens.muted,
                     padding: '3px 0',
                   }}>
-                    <span style={{ color: layer.accent, opacity: 0.6, marginRight: '6px' }}>—</span>
+                    <span style={{ color: layer.accent, opacity: 0.7, marginRight: '6px' }}>—</span>
                     {item}
                   </div>
                 ))}

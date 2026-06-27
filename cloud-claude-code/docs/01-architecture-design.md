@@ -30,9 +30,17 @@ Claude Code 是当前最成熟的 AI 编程 Agent，但它的设计假设是"单
 
 ## 2. 总体架构：五层平面
 
+系统从外到内分为五个平面（Plane），每层只与相邻层通信，不跨层调用：
+
+1. **Access Plane（接入层）** — 用户交互入口。Web App（React + SSE）、IDE Extension（VSCode/JetBrains）、CLI Client（thin proxy + WebSocket）三种形态共享同一后端 API Gateway
+2. **Control Plane（管控层）** — 请求调度中枢。Auth Service（SSO 认证 + JWT 签发）、Session Manager（会话状态机 + Redis 热存储）、Agent Orchestrator（意图识别 + Coordinator 模式 + Worker Pool）、Model Router（项目敏感级别路由 + 私有/外部模型 fallback）、Permission Engine（ch06 7 种模式 + 6 步决策链 + 审批流）
+3. **Execution Plane（执行层）** — Agent 运行时。每会话独立 K8s Pod（含 async generator query loop、14 步 tool pipeline、4 层 context compaction），挂载 CoW overlay workspace 和 gVisor 沙箱
+4. **Data Plane（数据层）** — 持久化存储。MinIO/S3（对话历史 JSONL + Memory Markdown）、Redis（会话热状态 TTL 24h）、Milvus/Qdrant（代码向量索引）、PostgreSQL（用户/权限）、ClickHouse（不可变审计日志）
+5. **Integration Plane（集成层）** — 外部系统对接。Git Service 抽象层（GitLab/Bitbucket）、Build Service 抽象层（Jenkins/GitLab CI）、MCP Server Registry（内部工具注册与发现）、Notification Service（Slack/飞书/邮件/Jira）
+
 :::diagram CloudArchitectureDiagram:::
 
-**关键设计**：每层只与相邻层通信，不跨层调用。Access 不知道 Agent Pod 的存在，Data 不知道用户是谁。
+**关键设计**：Access 不知道 Agent Pod 的存在，Data 不知道用户是谁。Control Plane 是所有请求的必经之路——它决定"谁可以在哪个项目上用什么模型做什么操作"。
 
 ---
 
